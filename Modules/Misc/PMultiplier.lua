@@ -174,8 +174,9 @@ CLEU = function(...)
 		end
 	-- PMultiplier OnRemove & OnUnitDeath Listener    
 	elseif EVENT == "UNIT_DIED" or EVENT == "UNIT_DESTROYED" then
-		local Units = ListenedSpell.Units
+		local Units
 		for _, ListenedSpell in pairs(ListenedSpells) do
+			Units = ListenedSpell.Units
 			if Units[DestGUID] then
 				Units[DestGUID] = nil
 			end
