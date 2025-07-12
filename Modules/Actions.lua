@@ -105,7 +105,8 @@ local itemCategory 			= {
 	[19950] = "BOTH",
 	[18820] = "BOTH",
 }
-	  	  	  
+	 
+local InCombatLockdown		= _G.InCombatLockdown	 
 local GetNetStats 			= _G.GetNetStats  	
 local GameLocale 			= _G.GetLocale()
 local C_CVar				= _G.C_CVar
@@ -568,6 +569,7 @@ end
 -------------------------------------------------------------------------------
 local DataSpellRanks = {}
 local DataIsSpellUnknown = {}
+local timeSinceLastUpdate = TMW.time
 function A.UpdateSpellBook(isProfileLoad)
 	local ShowAllSpellRanks = GetCVar("ShowAllSpellRanks") or "1"
 	SetCVar("ShowAllSpellRanks", "1")
@@ -683,8 +685,11 @@ function A.UpdateSpellBook(isProfileLoad)
 		--TMW:Fire("TMW_ACTION_RANK_DISPLAY_CHANGED") -- no need here since :Show method will be triggered 
 	end 
 	
-	SetCVar("ShowAllSpellRanks", ShowAllSpellRanks)
-	TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")
+	if TMW.time > timeSinceLastUpdate + 1 and not InCombatLockdown() then
+		TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")
+	end	
+	
+	SetCVar("ShowAllSpellRanks", ShowAllSpellRanks)	
 end 
 
 -- "LEARNED_SPELL_IN_TAB" > "TRAINER_UPDATE" > "SKILL_LINES_CHANGED"
@@ -692,11 +697,13 @@ end
 -- "SKILL_LINES_CHANGED" new added / existing level (rank) update, replaced to "TRAINER_UPDATE" because of lag spikes on MetaEngine
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_TAB", 		A.UpdateSpellBook)
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 				A.UpdateSpellBook) 
-TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", function()
+TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", function()	
 	A.UpdateSpellBook()
+	timeSinceLastUpdate = TMW.time
 end)
 TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", function()
 	A.UpdateSpellBook()
+	timeSinceLastUpdate = TMW.time
 end)
 
 function A:IsBlockedBySpellBook()
