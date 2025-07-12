@@ -191,7 +191,6 @@ local AuraList = {
     },
     Physical = {
         5246, -- Intimidating Shout
-        13741, 13793, -- Improved Gouge
         2094, -- Blind
         19503, -- Scatter Shot (hunter pvp talent)
         1833, -- Cheap Shot
@@ -224,8 +223,6 @@ local AuraList = {
         20066, -- Repentance 
 		-- Priest 
 		10955, -- Shackle Undead
-		-- Rogue 
-        13741, 13793, -- Improved Gouge	
 		-- Shaman		
         51514, -- Hex (also 211004, 210873, 211015, 211010)   
 		-- Warlock 
@@ -389,7 +386,6 @@ local AuraList = {
         6358, -- Seduction
         2094, -- Blind
         5246, -- Intimidating Shout
-        13741, 13793, -- Improved Gouge
         31661, -- Dragon's Breath
         19503, -- Scatter Shot        
         -- Rooted CC
@@ -1006,9 +1002,8 @@ local Info = {
 				29801, 								-- Rampage
 			},
 			[CONST.WARRIOR_PROTECTION] = {
-				12809,								-- Concussion Blow
 				47498,								-- Devastate
-				50227, 	-- Sword and Board
+				50227, 								-- Sword and Board
 			},
 		},
 		["PALADIN"]	= {

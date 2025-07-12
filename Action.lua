@@ -5206,7 +5206,6 @@ local GlobalFactory = {
 				[745] = { dur = 2 },
 				[15474] = { dur = 2 },
 				[14030] = { dur = 2 },
-				[19306] = { dur = 2 },
 				[4962] = { dur = 2 },
 			},
 			BlessingofSacrifice = {
@@ -5238,10 +5237,6 @@ local GlobalFactory = {
 				[16188] = { dur = 1.5 },
 				-- Shaman: Elemental Mastery
 				[16166] = { dur = 1.5 },
-				-- Warlock: Fel Domination
-				[18708] = { dur = 0 },
-				-- Warlock: Amplify Curse
-				[18288] = { dur = 10 },
 			},
 			PurgeLow = {
 				-- Paladin: Blessing of Freedom  
@@ -5267,11 +5262,7 @@ local GlobalFactory = {
 			},
 			Curse = {
 				-- Voodoo Hex   			(Shaman) 				-- I AM NOT SURE
-				[8277] = {}, 			
-				-- Warlock: Curse of Tongues
-				[1714] = { dur = 3 },
-				-- Warlock: Curse of Weakness
-				[702] = { dur = 3 },
+				[8277] = {},
 				-- Warlock: Curse of Doom
 				[603] = {},
 				-- Warlock: Curse of the Elements
@@ -5292,8 +5283,6 @@ local GlobalFactory = {
 				[8312] = { dur = 1 },
 				-- Hunter: Hunter's Mark
 				[1130] = {}, -- New Cata spell ID, KROKS
-				-- Rogue: Kick - Silenced
-				[18425] = { dur = 1 },
 				-- Priest: Mind Control 
 				[605] = { dur = 0 },
 				-- Priest: Psychic Scream
@@ -5360,12 +5349,9 @@ local GlobalFactory = {
 			BlessingofProtection = {
 				-- Disarm 
 				[676] = { dur = 5, LUA = [[return Unit(thisunit):IsMelee() and Unit(thisunit):HasBuffs("DamageBuffs_Melee") > 0]] }, 				-- Disarm 					(Warrior)
-				[14251] = { dur = 5, LUA = [[return Unit(thisunit):IsMelee() and Unit(thisunit):HasBuffs("DamageBuffs_Melee") > 0]] },				-- Riposte					(Rogue)
 				[23365] = { dur = 5, LUA = [[return Unit(thisunit):IsMelee() and Unit(thisunit):HasBuffs("DamageBuffs_Melee") > 0]] },				-- Dropped Weapon			(Unknown)
 				-- Stunned 
 				--[7922] = { dur = 1.5 }, 				-- Charge Stun				(Warrior)
-				[12809] = { dur = 4 },				-- Concussion Blow			(Warrior)
-				[20253] = { dur = 2.6 },			-- Intercept Stun 			(Warrior)
 				[5211] = { dur = 1.6 },				-- Bash						(Druid)
 				[9005] = { dur = 1.6 },				-- Pounce					(Druid)		
 				[1833] = { dur = 3 }, 				-- Cheap Shot 				(Rogue)
@@ -5379,7 +5365,6 @@ local GlobalFactory = {
 				[5246] = { dur = 4.5 }, 			-- Intimidating Shout		(Warrior)
 			},
 			BlessingofFreedom = {
-				[23694] = { dur = 2 },				-- Improved Hamstring		(Warrior)
 				[22519] = { dur = 2 }, 				-- Ice Nova 				(Mage)
 				[122] = { dur = 2 }, 				-- Frost Nova 				(Mage)	
 				[339] = { dur = 2 }, 				-- Entangling Roots 		(Druid)
@@ -5391,7 +5376,6 @@ local GlobalFactory = {
 			BlessingofSacrifice = {
 				[1833] = { dur = 3 }, 				-- Cheap Shot 				(Rogue)
 				[408] = { dur = 4.5 }, 				-- Kidney Shot 				(Rogue)	
-				[12809] = { dur = 4 },				-- Concussion Blow			(Warrior)
 			},
 			Vanish = {
 				[22519] = {}, 						-- Ice Nova 				(Mage)

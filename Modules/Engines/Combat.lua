@@ -1231,8 +1231,6 @@ local LossOfControl								= {
 		[GetSpellInfo(122)]						= "ROOT",
 		-- Frostbite
 		[GetSpellInfo(12494)]					= "ROOT",
-		-- Improved Hamstring
-		[GetSpellInfo(23694)]					= "ROOT",
 		-- Trap
 		[GetSpellInfo(8312)]					= "ROOT",
 		-- Mobility Malfunction
@@ -1267,8 +1265,6 @@ local LossOfControl								= {
 		[GetSpellInfo(14030)]					= "ROOT",
 		-- Encasing Webs
 		[GetSpellInfo(4962)]					= "ROOT",
-		-- Counterattack
-		[GetSpellInfo(19306)]					= "ROOT",
 		
 		-- [[ SNARE ]]
 		-- Wing Clip
@@ -1369,14 +1365,10 @@ local LossOfControl								= {
 		[GetSpellInfo(19482)]					= "STUN",
 		-- Charge Stun
 		[GetSpellInfo(7922)]					= "STUN",
-		-- Intercept Stun
-		[GetSpellInfo(20253)]					= "STUN",
 		-- Mace Stun Effect
 		[GetSpellInfo(5530)]					= "STUN",
 		-- Revenge Stun
 		[GetSpellInfo(12798)]					= "STUN",
-		-- Concussion Blow 
-		[GetSpellInfo(12809)]					= "STUN",
 		-- Stun
 		[GetSpellInfo(56)]						= "STUN",
 		-- Tidal Charm 
@@ -1495,8 +1487,6 @@ local LossOfControl								= {
 		[GetSpellInfo(16922)]					= "STUN",
 		
 		-- [[ DISARM ]]
-		-- Riposte
-		[GetSpellInfo(14251)]					= "DISARM",
 		-- Disarm
 		[GetSpellInfo(676)]						= "DISARM",		
 		-- Dropped Weapon
@@ -1555,8 +1545,6 @@ local LossOfControl								= {
 		[GetSpellInfo(18469)]					= "SILENCE",
 		-- Silence 
 		[GetSpellInfo(15487)]					= "SILENCE",
-		-- Kick - Silenced
-		[GetSpellInfo(18425)]					= "SILENCE",
 		-- Shield Bash - Silenced
 		[GetSpellInfo(18498)]					= "SILENCE",
 		-- Spell Lock (Felhunter)
