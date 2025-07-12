@@ -1,0 +1,32 @@
+## Interface: 90001
+## Title: Toaster
+## Notes: Configuration for LibToast notifications.
+## Author: Torhal
+## Version: 9.0.1.1
+## X-Date: 2020-10-26T4:40:20Z
+## X-Email: jcallahan@curse.com
+## X-Category: Professions
+## OptionalDeps: Ace3, LibToast-1.0, LibWindow-1.1
+## SavedVariables: ToasterSettings
+
+embeds.xml
+
+#@debug@
+# Localization\devel-enUS.lua
+#@end-debug@
+
+#@non-debug@
+Localization\enUS.lua
+#@end-non-debug@
+Localization\deDE.lua
+Localization\esES.lua
+Localization\esMX.lua
+Localization\frFR.lua
+Localization\koKR.lua
+Localization\ptBR.lua
+Localization\ruRU.lua
+Localization\zhCN.lua
+Localization\zhTW.lua
+
+Core.lua
+Config.lua

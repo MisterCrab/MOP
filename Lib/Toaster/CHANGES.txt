@@ -1,0 +1,24 @@
+tag 84ac94987917e59c8c8eef3608343d821a077728 9.0.1.1
+Author:	James D. Callahan III <darkenelf@gmail.com>
+Date:	Mon Oct 26 00:02:21 2020 -0500
+
+Shadowlands update.
+
+commit 3a184bb8b4a2974996c01961e3bd399588206a76
+Author: James D. Callahan III <darkenelf@gmail.com>
+Date:   Sun Oct 25 23:40:20 2020 -0500
+
+    Update the repository URI for LibToast-1.0.
+
+commit 5bdc278293138fc7fde005582d4eba1a15d44cb9
+Author: James D. Callahan III <darkenelf@gmail.com>
+Date:   Sun Oct 25 23:36:37 2020 -0500
+
+    Use BackdropTemplateMixin for the anchorFrame.
+
+commit 3a5add0c883d5deaee7859e380bfbb69336fc4e8
+Author: James D. Callahan III <darkenelf@gmail.com>
+Date:   Sun Oct 25 23:31:15 2020 -0500
+
+    Update ToC Interface for the WoW 9.0.1 version.
+
