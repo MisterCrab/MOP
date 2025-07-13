@@ -452,7 +452,7 @@ else
 				-- rank @number
 				-- available @boolean
 				-- spellID @number	
-				if talentInfo.selected or talentInfo.grantedByAura then
+				if talentInfo and (talentInfo.selected or talentInfo.grantedByAura) then
 					A.TalentMap[talentInfo.name] = talentInfo.rank or 1
 					A.TalentMap[talentInfo.spellID] = talentInfo.rank or 1
 					A.TalentMap[talentInfo.talentID] = talentInfo.rank or 1				
