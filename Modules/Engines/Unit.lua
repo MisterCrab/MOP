@@ -817,47 +817,47 @@ local AssociativeTables = setmetatable({ NullTable = {} }, { -- Only for Auras!
 end })
 
 -- Classic has always associative spellinput
---local IsMustBeByID = {}
---local function IsAuraEqual(spellName, spellID, spellInput, byID)
---	-- @return boolean 
---	if byID then 
---		if #spellInput > 0 then 				-- ArrayTables
---			for i = 1, #spellInput do 
---				if AuraList[spellInput[i]] then 
---					for _, auraListID in ipairs(AuraList[spellInput[i]]) do 
---						if spellID == auraListID then 
---							return true 
---						end 
---					end 
---				elseif spellID == spellInput[i] then 
---					return true 
---				end 
---			end
---		else 									-- AssociativeTables
---			return spellInput[spellID]
---		end 
---	else 
---		if #spellInput > 0 then 				-- ArrayTables
---			for i = 1, #spellInput do 
---				if AuraList[spellInput[i]] then 
---					for _, auraListID in ipairs(AuraList[spellInput[i]]) do 
---						if spellName == A_GetSpellInfo(auraListID) then 
---							return true 
---						end 
---					end 
---				elseif IsMustBeByID[spellInput[i]] then -- Retail only 
---					if spellID == spellInput[i] then 
---						return true 
---					end 
---				elseif spellName == A_GetSpellInfo(spellInput[i]) then 
---					return true 
---				end 
---			end 
---		else 									-- AssociativeTables
---			return spellInput[spellName]
---		end 
---	end 
---end
+local IsMustBeByID = {}
+local function IsAuraEqual(spellName, spellID, spellInput, byID)
+	-- @return boolean 
+	if byID then 
+		if #spellInput > 0 then 				-- ArrayTables
+			for i = 1, #spellInput do 
+				if AuraList[spellInput[i]] then 
+					for _, auraListID in ipairs(AuraList[spellInput[i]]) do 
+						if spellID == auraListID then 
+							return true 
+						end 
+					end 
+				elseif spellID == spellInput[i] then 
+					return true 
+				end 
+			end
+		else 									-- AssociativeTables
+			return spellInput[spellID]
+		end 
+	else 
+		if #spellInput > 0 then 				-- ArrayTables
+			for i = 1, #spellInput do 
+				if AuraList[spellInput[i]] then 
+					for _, auraListID in ipairs(AuraList[spellInput[i]]) do 
+						if spellName == A_GetSpellInfo(auraListID) then 
+							return true 
+						end 
+					end 
+				elseif IsMustBeByID[spellInput[i]] then -- Retail only 
+					if spellID == spellInput[i] then 
+						return true 
+					end 
+				elseif spellName == A_GetSpellInfo(spellInput[i]) then 
+					return true 
+				end 
+			end 
+		else 									-- AssociativeTables
+			return spellInput[spellName]
+		end 
+	end 
+end
 
 -------------------------------------------------------------------------------
 -- API: Core (Action Rotation Conditions)

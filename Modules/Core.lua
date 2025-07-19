@@ -65,6 +65,7 @@ local ClassPortaits 								= {
 	["SHAMAN"]	 									= CONST.PORTRAIT_SHAMAN, 		-- Custom because it making conflict with Bloodlust
 	["MAGE"] 										= CONST.PORTRAIT_MAGE,
 	["WARLOCK"] 									= CONST.PORTRAIT_WARLOCK,
+	["MONK"]                                        = CONST.PORTRAIT_MONK,
 	["DRUID"] 										= CONST.PORTRAIT_DRUID,
 	["DEATHKNIGHT"] 								= CONST.PORTRAIT_DEATHKNIGHT,
 }
