@@ -93,7 +93,7 @@ local isSpellRangeException = {
 	[20572]		= true,
 	[33702]		= true,	
 }
-local ItemHasRange 			= ItemHasRange
+local ItemHasRange 			= _G.ItemHasRange or _G.C_Item.ItemHasRange
 local isItemRangeException 	= {
 	[19950] = true,
 	[18820] = true,
@@ -390,9 +390,11 @@ end
 
 function A:GetSpellCharges()
 	-- @return number
-	local charges = GetSpellCharges((self:Info()))
+	local charges = GetSpellCharges(self.ID)
 	if not charges then 
 		charges = 0
+	elseif type(charges) == "table" then 
+		charges = charges.currentCharges
 	end 
 	
 	return charges
@@ -400,7 +402,11 @@ end
 
 function A:GetSpellChargesMax()
 	-- @return number
-	local _, max_charges = GetSpellCharges((self:Info()))
+	local charges, max_charges = GetSpellCharges(self.ID)
+	if type(charges) == "table" then 
+		max_charges = charges.maxCharges
+	end  
+	
 	if not max_charges then 
 		max_charges = 0
 	end 
@@ -410,7 +416,14 @@ end
 
 function A:GetSpellChargesFrac()
 	-- @return number	
-	local charges, maxCharges, start, duration = GetSpellCharges((self:Info()))
+	local charges, maxCharges, start, duration = GetSpellCharges(self.ID)
+	if type(charges) == "table" then 		
+		maxCharges = charges.maxCharges
+		start = charges.cooldownStartTime
+		duration = charges.cooldownDuration
+		charges = charges.currentCharges
+	end  
+	
 	if not maxCharges then 
 		return 0
 	end 
@@ -424,7 +437,11 @@ end
 
 function A:GetSpellChargesFullRechargeTime()
 	-- @return number
-	local _, _, _, duration = GetSpellCharges((self:Info()))
+	local charges, _, _, duration = GetSpellCharges(self.ID)
+	if type(charges) == "table" then 
+		duration = charges.cooldownDuration
+	end  
+	
 	if duration then 
 		return (self:GetSpellChargesMax() - self:GetSpellChargesFrac()) * duration
 	else 

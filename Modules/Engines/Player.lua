@@ -46,6 +46,7 @@ local PainPowerType				= PowerType.Pain
 local EssencePowerType 			= PowerType.Essence
 
 local GetSpellName 				= _G.C_Spell and _G.C_Spell.GetSpellName or _G.GetSpellInfo
+local C_Item					= _G.C_Item
 local InCombatLockdown			= _G.InCombatLockdown  
 local issecure					= _G.issecure
 
@@ -66,8 +67,8 @@ local 	 CancelUnitBuff, 	CancelSpellByName, 	  CombatLogGetCurrentEventInfo =
 	  
 -- Bags / Inventory
 local 	 C_Container = _G.C_Container
-local 	 GetContainerNumSlots, 	  									  GetContainerItemID, 	 								   GetInventoryItemID, 	  GetItemInfoInstant,    GetItemCount, 	  IsEquippableItem =	  
-	  _G.GetContainerNumSlots or C_Container.GetContainerNumSlots, _G.GetContainerItemID or C_Container.GetContainerItemID, _G.GetInventoryItemID, _G.GetItemInfoInstant, _G.GetItemCount, _G.IsEquippableItem
+local 	 GetContainerNumSlots, 	  									  GetContainerItemID, 	 								   GetInventoryItemID, 	  										  GetItemInfoInstant,    								   GetItemCount, 	  									  IsEquippableItem =	  
+	  _G.GetContainerNumSlots or C_Container.GetContainerNumSlots, _G.GetContainerItemID or C_Container.GetContainerItemID, _G.GetInventoryItemID, C_Item and C_Item.GetItemInfoInstant or _G.GetItemInfoInstant, C_Item and C_Item.GetItemCount or _G.GetItemCount, C_Item and C_Item.IsEquippableItem or _G.IsEquippableItem
 	  
 -- Glyphs WOTLK+ 
 local C_SpecializationInfo 		= _G.C_SpecializationInfo
