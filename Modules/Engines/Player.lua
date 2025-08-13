@@ -1525,6 +1525,26 @@ end
 
 -- rune
 function Player:Rune(runeType)
+    if not runeType then
+        local totalRunes = 0
+        for i = 1, 6 do
+            if GetRuneCooldown(i) == 0 then
+                totalRunes = totalRunes + 1
+            end
+        end
+        return totalRunes
+    end
+
+    if runeType == "Death" then
+        local deathRuneCount = 0
+        for i = 1, 6 do
+            if GetRuneCooldown(i) == 0 and GetRuneType(i) == 4 then
+                deathRuneCount = deathRuneCount + 1
+            end
+        end
+        return deathRuneCount
+    end
+
     local specificRuneCount = 0
     local deathRuneCount = 0
 
@@ -1539,14 +1559,8 @@ function Player:Rune(runeType)
         slotsToCheck = unholySlots
     elseif runeType == "Frost" then
         slotsToCheck = frostSlots
-    elseif not runeType then
-        local totalRunes = 0
-        for i=1, 6 do
-            if GetRuneCooldown(i) == 0 then
-                totalRunes = totalRunes + 1
-            end
-        end
-        return totalRunes
+    else
+        return 0
     end
 
     for i = 1, 6 do
@@ -1560,7 +1574,8 @@ function Player:Rune(runeType)
             specificRuneCount = specificRuneCount + 1
         end
     end
-        return specificRuneCount + deathRuneCount
+    
+    return specificRuneCount + deathRuneCount
 end
 
 -- rune.time_to_x
