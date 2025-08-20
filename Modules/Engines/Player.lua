@@ -53,8 +53,8 @@ local issecure					= _G.issecure
 local 	 UnitLevel,    UnitPower, 	 UnitPowerMax, 	  UnitStagger, 	  UnitAttackSpeed, 	  UnitRangedDamage,    UnitDamage,     UnitAura =
 	  _G.UnitLevel, _G.UnitPower, _G.UnitPowerMax, _G.UnitStagger, _G.UnitAttackSpeed, _G.UnitRangedDamage, _G.UnitDamage,  _G.UnitAura or _G.C_UnitAuras.GetAuraDataByIndex
 
-local 	 GetPowerRegen,    GetShapeshiftForm, 	 GetCritChance,    GetHaste, 	GetComboPoints =
-	  _G.GetPowerRegen, _G.GetShapeshiftForm, _G.GetCritChance, _G.GetHaste, _G.GetComboPoints
+local	 GetPowerRegen,    GetRuneCooldown,	   GetRuneType,    GetShapeshiftForm, 	 GetCritChance,    GetHaste, 	GetMasteryEffect, 	 GetVersatilityBonus, 	 GetCombatRatingBonus, 	  GetComboPoints =
+	  _G.GetPowerRegen, _G.GetRuneCooldown, _G.GetRuneType, _G.GetShapeshiftForm, _G.GetCritChance, _G.GetHaste, _G.GetMasteryEffect, _G.GetVersatilityBonus, _G.GetCombatRatingBonus, _G.GetComboPoints 
 	  
 local 	GetTotemInfo, 	 GetTotemTimeLeft =
 	 _G.GetTotemInfo, _G.GetTotemTimeLeft	  
@@ -159,6 +159,12 @@ local Data = {
 	-- Inventory
 	CheckInv 	= {},
 	InfoInv 	= {},
+	-- Runes
+	RunePresence = {
+		[CONST.DEATHKNIGHT_BLOOD] = 1, 	Blood = 1, 
+		[CONST.DEATHKNIGHT_FROST] = 3, 	Frost = 3,
+		[CONST.DEATHKNIGHT_UNHOLY] = 2, Unholy = 2,
+	},	
 	-- Glyph
 	Glyphs		= {},
 } 
@@ -173,6 +179,7 @@ local DataCheckBags					= Data.CheckBags
 local DataInfoBags					= Data.InfoBags
 local DataCheckInv					= Data.CheckInv
 local DataInfoInv					= Data.InfoInv
+local DataRunePresence				= Data.RunePresence
 local DataGlyphs					= Data.Glyphs
 
 function Data.logAura(...)
@@ -1524,14 +1531,19 @@ local function ComputeRuneCooldown(Slot, BypassRecovery)
 end
 
 -- rune
-function Player:Rune()
-	local Count = 0
+function Player:Rune(presence)
+	local presenceType = DataRunePresence[presence]	
+    local c = 0
+
+	local runeType
 	for i = 1, 6 do
-		if ComputeRuneCooldown(i) == 0 then
-			Count = Count + 1
+		runeType = presenceType and GetRuneType and GetRuneType(i) or nil
+		if ComputeRuneCooldown(i) == 0 and (runeType == presenceType or runeType == 4) then -- 4 is RUNETYPE_DEATH
+			c = c + 1
 		end
-	end
-	return Count
+	end	
+
+	return c
 end
 
 -- rune.time_to_x
