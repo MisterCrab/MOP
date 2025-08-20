@@ -161,9 +161,10 @@ local Data = {
 	InfoInv 	= {},
 	-- Runes
 	RunePresence = {
-		[CONST.DEATHKNIGHT_BLOOD] = 1, 	Blood = 1, 
-		[CONST.DEATHKNIGHT_FROST] = 3, 	Frost = 3,
-		[CONST.DEATHKNIGHT_UNHOLY] = 2, Unholy = 2,
+		[CONST.DEATHKNIGHT_BLOOD] 	= 1, 	Blood 	= 1, 
+		[CONST.DEATHKNIGHT_FROST] 	= 3, 	Frost 	= 3,
+		[CONST.DEATHKNIGHT_UNHOLY] 	= 2, 	Unholy 	= 2,
+											Death 	= 4,
 	},	
 	-- Glyph
 	Glyphs		= {},
@@ -1532,7 +1533,7 @@ end
 
 -- rune
 function Player:Rune(presence)
-	local presenceType = DataRunePresence[presence]	
+	local presenceType = DataRunePresence[presence]	or presence
     local c = 0
 
 	local runeType
