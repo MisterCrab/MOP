@@ -2329,7 +2329,8 @@ A.CombatTracker									= {
 			local DMG, Hits 					= self:GetDMG(UNIT)
 			
 			-- We need "health > 0" condition to ensure that the unit is still alive
-			if DMG >= 1 and Hits > 1 and health > 0 then		
+			if health <= 0 then return 0 end
+			if DMG >= 1 and Hits > 1 then		
 				ttd = (health - ( A_CombatTracker:UnitHealthMax(UNIT) * (X / 100) )) / DMG
 				-- ToDo: Probably this condition will fix negative numbers, if so then remove it on v2
 				if ttd <= 0 then 
@@ -2350,7 +2351,8 @@ A.CombatTracker									= {
 			local DMG, Hits 					= self:GetDMG(UNIT)
 			
 			-- We need "health > 0" condition to ensure that the unit is still alive
-			if DMG >= 1 and Hits > 1 and health > 0 then
+			if health <= 0 then return 0 end
+			if DMG >= 1 and Hits > 1 then
 				ttd = health / DMG
 				-- ToDo: Probably this condition will fix negative numbers, if so then remove it on v2
 				if ttd <= 0 then 
@@ -2371,7 +2373,8 @@ A.CombatTracker									= {
 			local _, Hits, _, DMG 				= self:GetDMG(UNIT)
 			
 			-- We need "health > 0" condition to ensure that the unit is still alive
-			if DMG >= 1 and Hits > 1 and health > 0 then		
+			if health <= 0 then return 0 end
+			if DMG >= 1 and Hits > 1 then		
 				ttd = (health - ( A_CombatTracker:UnitHealthMax(UNIT) * (X / 100) )) / DMG
 				-- ToDo: Probably this condition will fix negative numbers, if so then remove it on v2
 				if ttd <= 0 then 
@@ -2392,7 +2395,8 @@ A.CombatTracker									= {
 			local _, Hits, _, DMG 				= self:GetDMG(UNIT)
 			
 			-- We need "health > 0" condition to ensure that the unit is still alive
-			if DMG >= 1 and Hits > 1 and health > 0 then
+			if health <= 0 then return 0 end
+			if DMG >= 1 and Hits > 1 then
 				ttd = health / DMG
 				-- ToDo: Probably this condition will fix negative numbers, if so then remove it on v2
 				if ttd <= 0 then 
