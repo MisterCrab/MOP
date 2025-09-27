@@ -2704,6 +2704,8 @@ A.UnitCooldown 									= {
 -- Tracks Freezing Trap 
 A.UnitCooldown:Register(CONST.SPELLID_FREEZING_TRAP, 30)
 A.UnitCooldown:Register(CONST.SPELLID_FREEZING_TRAP2, 30)
+-- Tracks Counter Shot (it's fly able spell and can be avoided by stopcasting)
+A.UnitCooldown:Register("arena", CONST.SPELLID_COUNTER_SHOT,  24, false, true, nil, true)
 
 -------------------------------------------------------------------------------
 -- API: LossOfControl

@@ -22,6 +22,7 @@ local DetermineUsableObject							= A.DetermineUsableObject
 local Re 											= A.Re
 local BossMods										= A.BossMods
 local IsUnitEnemy									= A.IsUnitEnemy
+local UnitCooldown									= A.UnitCooldown
 local Unit											= A.Unit 
 local Player										= A.Player 
 local LoC 											= A.LossOfControl
@@ -38,8 +39,10 @@ local CONST_PAUSECHECKS_IS_EAT_OR_DRINK 			= CONST.PAUSECHECKS_IS_EAT_OR_DRINK
 local CONST_AUTOTARGET 								= CONST.AUTOTARGET
 local CONST_AUTOSHOOT 								= CONST.AUTOSHOOT
 local CONST_AUTOATTACK 								= CONST.AUTOATTACK
+local CONST_STOPCAST 								= CONST.STOPCAST
 local CONST_LEFT 									= CONST.LEFT
 local CONST_RIGHT									= CONST.RIGHT
+local CONST_SPELLID_COUNTER_SHOT					= CONST.SPELLID_COUNTER_SHOT
 
 local Pet											= _G.LibStub("PetLibrary")
 local UnitBuff										= _G.UnitBuff
@@ -132,6 +135,10 @@ local function PauseChecks()
 		return CONST_PAUSECHECKS_DISABLED
 	end 
 	
+	if GetToggle(1, "CheckVehicle") and Unit(player):InVehicle() then
+        return CONST_PAUSECHECKS_DISABLED
+    end	
+		
 	if 	(GetToggle(1, "CheckDeadOrGhost") and Unit(player):IsDead()) or 
 		(
 			GetToggle(1, "CheckDeadOrGhostTarget") and 
@@ -177,6 +184,8 @@ local Temp = {
 	LivingActionPotionIsMissed		= {"INCAPACITATE", "DISORIENT", "FREEZE", "POSSESS", "SAP", "CYCLONE", "BANISH", "PACIFYSILENCE", "POLYMORPH", "SLEEP", "SHACKLE_UNDEAD", "FEAR", "HORROR", "CHARM", "TURN_UNDEAD"},
 }
 local TempLivingActionPotionIsMissed = Temp.LivingActionPotionIsMissed
+
+local TotalAndKickImun		= {"TotalImun", "KickImun"}
 
 -------------------------------------------------------------------------------
 -- API
@@ -431,6 +440,20 @@ function A.Rotation(icon)
 			return APL.Shadowmeld:Show(icon)
 		end 
 		
+		-- Stopcasting
+		if GetToggle(1, "StopCast") then 
+			local _, castLeft, _, _, castName, notInterruptable = Unit(player):CastTime() 
+			if castName then 
+				-- Catch Counter Shot 
+				if A.IsInPvP and not notInterruptable and UnitCooldown:GetCooldown("arena", CONST_SPELLID_COUNTER_SHOT) > UnitCooldown:GetMaxDuration("arena", CONST_SPELLID_COUNTER_SHOT) - 1 and UnitCooldown:IsSpellInFly("arena", CONST_SPELLID_COUNTER_SHOT) then 
+					local Caster = UnitCooldown:GetUnitID("arena", CONST_SPELLID_COUNTER_SHOT)
+					if Caster and Unit(Caster):GetRange() <= 40 and Unit(player):HasBuffs(TotalAndKickImun) == 0 then 
+						return A:Show(icon, CONST_STOPCAST)
+					end 
+				end 
+			end 
+		end 		
+		
 		-- Cursor 
 		if A.GameTooltipClick and not IsMouseButtonDown("LeftButton") and not IsMouseButtonDown("RightButton") then 			
 			if A.GameTooltipClick == "LEFT" then 
@@ -440,9 +463,15 @@ function A.Rotation(icon)
 			end 
 		end 
 		
-		-- ReTarget 
-		if A.Zone == "pvp" and (A:GetTimeSinceJoinInstance() >= 30 or Unit(player):CombatTime() > 0) and Re:CanTarget(icon) then  
-			return true
+		-- ReTarget ReFocus 
+		if (A.Zone == "arena" or A.Zone == "pvp") and (A:GetTimeSinceJoinInstance() >= 30 or Unit(player):CombatTime() > 0) then 
+			if Re:CanTarget(icon) then 
+				return true
+			end 
+			
+			if Re:CanFocus(icon) then 
+				return true
+			end
 		end 
 		
 		if not Player:IsStealthed() then 

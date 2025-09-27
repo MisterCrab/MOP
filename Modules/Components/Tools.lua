@@ -31,10 +31,6 @@ local GetAddOnInfo 				= C_AddOns and C_AddOns.GetAddOnInfo or _G.GetAddOnInfo
 
 local CreateFrame 				= _G.CreateFrame
 local UnitGUID 					= _G.UnitGUID
-
-local C_SpecializationInfo		= _G.C_SpecializationInfo
-local  GetNumTalentTabs,	GetNumTalents,																	 GetTalentInfo,	   GetPvpTalentInfoByID, 											   GetAllSelectedPvpTalentIDs =
-	_G.GetNumTalentTabs, _G.GetNumTalents, C_SpecializationInfo and C_SpecializationInfo.GetTalentInfo or _G.GetTalentInfo, _G.GetPvpTalentInfoByID, C_SpecializationInfo and C_SpecializationInfo.GetAllSelectedPvpTalentIDs
 	  
 local CACHE_DEFAULT_TIMER		= CONST.CACHE_DEFAULT_TIMER	  
 
@@ -394,92 +390,6 @@ hooksecurefunc(A, "GetLocalization", function()
 	-- Reviews and disables parts caused error C stack overflow 
 	Cache.data()
 end)
-
--------------------------------------------------------------------------------
--- TalentMap  
--------------------------------------------------------------------------------
-A.TalentMap = {}
-
-if BuildToC < 50500 then
-	-- Classic, TBC, WOTLK, CATA
-	local function TalentMap()
-		wipe(A.TalentMap)
-		for tab = 1, GetNumTalentTabs() do
-			for talent = 1, GetNumTalents(tab) do
-				local name, _, _, _, rank = GetTalentInfo(tab, talent)
-				if name then
-					A.TalentMap[name] = rank or 0
-				end
-			end
-		end
-		TMW:Fire("TMW_ACTION_TALENT_MAP_UPDATED")
-	end
-
-	A.Listener:Add("ACTION_EVENT_TOOLS", "PLAYER_ENTERING_WORLD", 		TalentMap)
-	A.Listener:Add("ACTION_EVENT_TOOLS", "ACTIVE_TALENT_GROUP_CHANGED", TalentMap)
-	A.Listener:Add("ACTION_EVENT_TOOLS", "CONFIRM_TALENT_WIPE", 		TalentMap)
-	A.Listener:Add("ACTION_EVENT_TOOLS", "CHARACTER_POINTS_CHANGED", 	TalentMap)
-else
-	-- MOP - Shadowlands
-	local MAX_NUM_TALENT_TIERS = _G.MAX_NUM_TALENT_TIERS
-	local NUM_TALENT_COLUMNS = _G.NUM_TALENT_COLUMNS
-	
-	local function TalentMap()
-		wipe(A.TalentMap)
-		
-		local talentInfo
-		local talentInfoQuery = {}
-		for tier = 1, MAX_NUM_TALENT_TIERS do
-			for column = 1, NUM_TALENT_COLUMNS do
-				talentInfoQuery.tier = tier
-				talentInfoQuery.column = column
-				talentInfo = GetTalentInfo(talentInfoQuery)
-				-- isExceptional @boolean
-				-- talentID @number
-				-- known @boolean
-				-- maxRank @number
-				-- hasGoldBorder @boolean
-				-- tier @number
-				-- selected @boolean
-				-- icon @number
-				-- grantedByAura @boolean
-				-- meetsPreviewPrereq @boolean
-				-- previewRank @number
-				-- meetsPrereq @boolean
-				-- name @string
-				-- isPVPTalentUnlocked @boolean
-				-- column @number
-				-- rank @number
-				-- available @boolean
-				-- spellID @number	
-				if talentInfo and (talentInfo.selected or talentInfo.grantedByAura) then
-					A.TalentMap[talentInfo.name] = talentInfo.rank or 1
-					A.TalentMap[talentInfo.spellID] = talentInfo.rank or 1
-					A.TalentMap[talentInfo.talentID] = talentInfo.rank or 1				
-				end
-			end
-		end
-		
-		local _, name, ids
-		if GetPvpTalentInfoByID then
-			ids = GetAllSelectedPvpTalentIDs()
-			for _, id in pairs(ids) do
-				_, name = GetPvpTalentInfoByID(id)
-				if name then
-					A.TalentMap[name] = true
-					A.TalentMap[id] = true
-				end
-			end
-		end	
-		
-		TMW:Fire("TMW_ACTION_TALENT_MAP_UPDATED")		
-	end
-
-	A.Listener:Add("ACTION_EVENT_TOOLS", "PLAYER_ENTERING_WORLD", 		TalentMap)
-	A.Listener:Add("ACTION_EVENT_TOOLS", "ACTIVE_TALENT_GROUP_CHANGED", TalentMap)
-	A.Listener:Add("ACTION_EVENT_TOOLS", "PLAYER_TALENT_UPDATE", 		TalentMap)
-	--A.Listener:Add("ACTION_EVENT_TOOLS", "PLAYER_PVP_TALENT_UPDATE", 	TalentMap)
-end
 
 -------------------------------------------------------------------------------
 -- Timers 

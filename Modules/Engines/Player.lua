@@ -917,7 +917,8 @@ end
 
 function Player:HasTier(tier, count)
 	-- @return boolean 
-	return self:GetTier(tier) >= count 
+	-- Set Bonuses are disabled in MoP: Proving Grounds (InstanceID = 1148, ZoneID = 480)
+	return self:GetTier(tier) >= count and A.ZoneID ~= 480 
 end 
 
 -- Bags 

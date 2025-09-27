@@ -750,13 +750,11 @@ end
 function A:GetTalentRank()
 	-- @usage A:GetTalentRank() or A.GetTalentRank(spellID)
 	-- @return number 
-	local ID, Name
-	if type(self) == "table" then 
-		--ID = self.ID 
+	local Name
+	if type(self) == "table" then
 		Name = self:Info()
 	else 
-		ID = self 
-		Name = A_GetSpellInfo(ID)
+		Name = A_GetSpellInfo(self)
 	end	
 	return TalentMap[Name] or 0 
 end 
@@ -764,15 +762,13 @@ end
 function A:IsTalentLearned()
 	-- @usage A:IsTalentLearned() or A.IsTalentLearned(spellID)
 	-- @return boolean 
-	local ID, Name
+	local Name
 	if type(self) == "table" then 
-		ID = self.ID 
 		Name = self:Info()
 	else 
-		ID = self 
-		Name = A_GetSpellInfo(ID)
+		Name = A_GetSpellInfo(self)
 	end	
-	return TalentMap[Name] and TalentMap[Name] > 0 or false 
+	return TalentMap[Name] and TalentMap[Name] > 0
 end
 
 -- Remap to keep old code working for it 
@@ -950,7 +946,7 @@ function A:GetItemCooldown()
 	end 
 	
 	local start, duration, enable = self.Item:GetCooldown()
-	return enable ~= 0 and ((duration == 0 or A_OnGCD(duration)) and 0 or duration - (TMW.time - start)) or huge
+	return (enable == 1 or enable == true) and duration and ((duration == 0 or A_OnGCD(duration)) and 0 or duration - (TMW.time - start)) or huge
 end 
 
 function A:GetItemCategory()
@@ -1581,6 +1577,7 @@ function A.Create(args)
 	 	Optional:			
 			Desc (@string) 					- description used in A:GetTableKeyIdentify and in UI in the Actions tab in Desc ceil 
 			Hidden (@boolean) 				- hides action from UI and skips it in MetaEngine
+			HiddenUI (@boolean)				- hides action from UI only, if both Hidden and HiddenUI are set then Hidden will take over priority
 			QueueForbidden (@boolean) 		- if true, user will not be able to set queue on it
 			BlockForbidden (@boolean)		- if true, user will not be able to set blocker on it
 			Texture (@number) 				- only if Type is Spell|Item|Potion|Trinket|HeartOfAzeroth|SwapEquip, sets texture from Spell|Item data base
