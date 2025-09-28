@@ -698,13 +698,14 @@ function A.UpdateSpellBook(isProfileLoad)
 	end 
 	
 	if isProfileLoad ~= true then 
-		TMW:Fire("TMW_ACTION_SPELL_BOOK_CHANGED")	  -- for [3] tab refresh 
-		--TMW:Fire("TMW_ACTION_RANK_DISPLAY_CHANGED") -- no need here since :Show method will be triggered 
-	end 
+		TMW:Fire("TMW_ACTION_SPELL_BOOK_CHANGED")	  		-- for [3] tab refresh 
+		--TMW:Fire("TMW_ACTION_RANK_DISPLAY_CHANGED") 		-- no need here since :Show method will be triggered 
 	
-	if TMW.time > timeSinceLastUpdate + 1 and not InCombatLockdown() then
-		TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")
-	end	
+		if TMW.time > timeSinceLastUpdate + 1 and not InCombatLockdown() then
+			TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")	-- only fired on new or updated spells
+			timeSinceLastUpdate = TMW.time
+		end
+	end 
 	
 	SetCVar("ShowAllSpellRanks", ShowAllSpellRanks)	
 end 
@@ -714,13 +715,9 @@ end
 -- "SKILL_LINES_CHANGED" new added / existing level (rank) update, replaced to "TRAINER_UPDATE" because of lag spikes on MetaEngine
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_TAB", 		A.UpdateSpellBook)
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 				A.UpdateSpellBook) 
-TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", function()	
-	A.UpdateSpellBook()
-	timeSinceLastUpdate = TMW.time
-end)
+TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", 					A.UpdateSpellBook)
 TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", function()
-	A.UpdateSpellBook()
-	timeSinceLastUpdate = TMW.time
+	A.UpdateSpellBook(true)
 end)
 
 function A:IsBlockedBySpellBook()
