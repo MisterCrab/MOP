@@ -3,6 +3,7 @@ local _G, next		 							=
 	  
 local A 										= _G.Action
 local Listener 									= A.Listener
+local CombatTracker								= A.CombatTracker
 
 local TeamCache									= A.TeamCache
 local TeamCacheFriendly							= TeamCache.Friendly
@@ -38,7 +39,7 @@ local function GetGUID(unitID)
 end 
 
 local function UnitInspectItem(unitID, invID)
-    if UnitPlayerControlled(unitID) and CheckInteractDistance(unitID, 1) and CanInspect(unitID, false) and not UnitIsUnit("player", unitID) then  
+    if CombatTracker:CombatTime("player") == 0 and UnitPlayerControlled(unitID) and CheckInteractDistance(unitID, 1) and CanInspect(unitID, false) and not UnitIsUnit("player", unitID) then  
 		local GUID = GetGUID(unitID)
 		if not GUID then 
 			return 
