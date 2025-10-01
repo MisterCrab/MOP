@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "28.09.2025"
+local DateTime 														= "01.10.2025"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -13022,39 +13022,39 @@ function Action.ToggleMainUI()
 			local Scroll, ScrollTable, Key, SetQueue, SetBlocker, MacroButton, MacroEditor, LuaButton, LuaEditor, QLuaButton, QLuaEditor, AutoHidden
 			
 			local AutoHiddenEvents				= {
-				["ACTIVE_TALENT_GROUP_CHANGED"]	= true, 
+				["ACTIVE_TALENT_GROUP_CHANGED"]	= true,
 				["BAG_UPDATE"]					= true,
 				["BAG_UPDATE_COOLDOWN"]			= true,
 				["PLAYER_EQUIPMENT_CHANGED"]	= true,
 				["UNIT_INVENTORY_CHANGED"]		= true,
-				--["UI_INFO_MESSAGE"]			= true, -- Classic: No war mode 
-				--["UNIT_PET"] 					= true, -- Replaced by callbacks "TMW_ACTION_PET_LIBRARY_MAIN_PET_UP" and "TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN"
-				--["PLAYER_LEVEL_UP"]			= true,	-- Classic: Spells are learn able only by teachers
+				["UI_INFO_MESSAGE"]				= not StdUi.isClassic, -- Classic: No war mode
+				--["PLAYER_LEVEL_UP"]			= true,	-- Retail: Replaced by callback TMW_ACTION_SPELL_BOOK_CHANGED | Classic: Spells are learn able only by teachers
+				--["UNIT_PET"] 					= true, -- Replaced by callbacks TMW_ACTION_PET_LIBRARY_MAIN_PET_UP and TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN which are represented by TMW_ACTION_SPELL_BOOK_CHANGED				
 			}
 			local AutoHiddenToggle				= function()
 				local script 					= ScrollTable:GetScript("OnEvent")
 				if Action.GetToggle(tabName, "AutoHidden") then 
 					-- Registers events 
-					for k in pairs(AutoHiddenEvents) do 
-						ScrollTable:RegisterEvent(k)
+					for k, v in pairs(AutoHiddenEvents) do 
+						if v then
+							ScrollTable:RegisterEvent(k)
+						end
 					end 
 					
 					-- Registers callback (Classic: Callback fires in the next priority talents -> spellbook)				
 					TMW:RegisterCallback("TMW_ACTION_SPELL_BOOK_CHANGED", 			script)
-					TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", 		script)
-					TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN", 	script)
 				else 
 					-- Unregisters events 
-					for k in pairs(AutoHiddenEvents) do 
-						ScrollTable:UnregisterEvent(k)
+					for k, v in pairs(AutoHiddenEvents) do 
+						if v then
+							ScrollTable:UnregisterEvent(k)
+						end
 					end 
 					
 					-- Unregisters callback 
 					TMW:UnregisterCallback("TMW_ACTION_SPELL_BOOK_CHANGED", 		script)
-					TMW:UnregisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", 	script)
-					TMW:UnregisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN",  script)
 				end 
-			end 						
+			end
 						
 			-- UI: Scroll
 			Scroll 						= setmetatable({
@@ -17301,12 +17301,17 @@ function Action.ToggleMainUI()
 				end
 			end)
 			PanelFramework.Category.OnValueChanged = function(self, value)
+				local hasChanges = specDB.Framework ~= value
 				specDB.Framework = value
 				MetaEnginePanel:SetShown(value == "MetaEngine")
 				if value == "MetaEngine" then
 					MetaEnginePanel.ScrollTable.MakeUpdate()
 				end
 				TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")
+				
+				if hasChanges then
+					TMW:Fire("TMW_ACTION_FRAMEWORK_CHANGED")
+				end
 			end
 			PanelFramework.Category.text:SetJustifyH("CENTER")				
 			
