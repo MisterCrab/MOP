@@ -921,7 +921,8 @@ function Framework:UpdateColor()
 		elseif current == "MetaEngine" then
 			Framework.texture:SetColorTexture(ActionDataUniversalColor[3]())		
 		end
-				
+
+		TMW:Fire("TMW_ACTION_UPDATE_FRAMES_OPACITY")
 		TimerSetRefreshAble("Framework:Hide", 20, function() Framework:Hide() end)		
 	end
 end
@@ -958,6 +959,10 @@ local function UpdateFrames()
 		
         return 
     end
+	
+	----------------------
+	-- SCALE CONTROLLER --
+	--	
 	
 	local myheight = select(2, GetPhysicalScreenSize())
     local myscale1 = 0.42666670680046 * (1080 / myheight)  
@@ -1017,9 +1022,35 @@ local function UpdateFrames()
         Framework:SetScale((0.71111112833023 * (1080 / myheight)) / (Framework:GetParent() and Framework:GetParent():GetEffectiveScale() or 1))	
 		TimerSetRefreshAble("Framework:Hide", 20, function() Framework:Hide() end)
 	end 	
+
+	------------------------
+	-- OPACITY CONTROLLER --
+	-- Update opacity only for v1 frames, skip other frames as they still can be used for AutoProfile
+	--
+	
+	local alpha = A.MetaEngine and A.MetaEngine:IsHealthy() and GetToggle(1, "DisableRegularFrames") and 0 or 1
+	
+	if group1 and TellMeWhen_Group1:GetAlpha() ~= alpha then
+		TellMeWhen_Group1:SetAlpha(alpha)
+	end
+
+	if TargetColor and TargetColor:GetAlpha() ~= alpha then
+		TargetColor:SetAlpha(alpha)
+	end	
+	
+	-- Rank Spells 
+	if RankSingle and RankSingle:GetAlpha() ~= alpha then 
+		RankSingle:SetAlpha(alpha)
+	end 
+	
+	if RankAoE and RankAoE:GetAlpha() ~= alpha then 
+		RankAoE:SetAlpha(alpha)
+	end
 end
 
 local function UpdateCVAR()
+	if not A.IsInitialized then return end
+	
 	local CVars = GetToggle(1, "CVars")
 	
     if CVars[1] and GetCVar("Contrast") ~= "50" then 
@@ -1107,6 +1138,7 @@ local function UpdateCVAR()
 		end		
 	end
 end
+TMW:RegisterCallback("TMW_ACTION_CVARS_CHANGED", UpdateCVAR)
 
 local function ConsoleUpdate()
 	UpdateCVAR()
@@ -1120,6 +1152,8 @@ TMW:RegisterSelfDestructingCallback("TMW_ACTION_IS_INITIALIZED_PRE", function()
 			UpdateFrames()  
 		end
     end)
+	
+	TMW:RegisterCallback("TMW_ACTION_UPDATE_FRAMES_OPACITY", 		UpdateFrames	)
 	
 	Listener:Add("ACTION_EVENT_UTILS", "DISPLAY_SIZE_CHANGED", 		ConsoleUpdate	)
 	Listener:Add("ACTION_EVENT_UTILS", "UI_SCALE_CHANGED", 			ConsoleUpdate	)
@@ -1187,6 +1221,7 @@ end
 --    charges, maxCharges, chargeStart, chargeDur
 --    stack, stack,
 --    iName			
+local paramTable = {}
 local function TMWAPI(icon, ...)
     local attributesString, param = ...
 	
@@ -1195,7 +1230,8 @@ local function TMWAPI(icon, ...)
 			-- Color if not colored (Alpha will show it)
 			if type(param) == "table" and param["Color"] then 
 				if icon.attributes.calculatedState.Color ~= param["Color"] then 
-					icon:SetInfo(attributesString, {Color = param["Color"], Alpha = param["Alpha"], Texture = param["Texture"]})
+					paramTable.Color, paramTable.Alpha, paramTable.Texture = param["Color"], param["Alpha"], param["Texture"]
+					icon:SetInfo(attributesString, paramTable)
 				end
 				return 
 			end 
@@ -1212,7 +1248,7 @@ local function TMWAPI(icon, ...)
 		if attributesString == "texture" and type(param) == "number" then         
 			if (icon.attributes.calculatedState.Color ~= "ffffffff" or icon.attributes.realAlpha == 0) then 
 				-- Show + Texture if hidden
-				icon:SetInfo("state; " .. attributesString, CONST.TMW_DEFAULT_STATE_SHOW, param)
+				icon:SetInfo(strjoin("", "state; ", attributesString), CONST.TMW_DEFAULT_STATE_SHOW, param)
 			elseif icon.attributes.texture ~= param then 
 				-- Texture if not applied        
 				icon:SetInfo(attributesString, param)

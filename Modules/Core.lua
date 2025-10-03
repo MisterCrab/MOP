@@ -370,6 +370,13 @@ function A.CanUseSwiftnessPotion(icon, unitID, range)
 	end 
 end 
 
+local function SetMetaAlpha(meta, alpha)
+	local frame = TMW.profile[1][meta]
+	if frame and frame:GetAlpha() ~= alpha then
+		frame:SetAlpha(alpha)
+	end
+end
+
 function A.Rotation(icon)
 	local APL = A[playerClass]
 	if not A.IsInitialized or not APL then 
@@ -428,10 +435,15 @@ function A.Rotation(icon)
 	local PauseChecks = PauseChecks()
 	if PauseChecks then
 		if meta == 3 then 
+			if PauseChecks ~= CONST_PAUSECHECKS_DISABLED then
+				SetMetaAlpha(meta, 0)
+			else
+				SetMetaAlpha(meta, 1)
+			end
 			return A:Show(icon, PauseChecks)
 		end  
-		return A_Hide(icon)		
-	end 		
+		return A_Hide(icon)	
+	end		
 	
 	-- [6] Passive: @player, @raid1, @party1, @arena1 
 	if meta == 6 then 
@@ -503,7 +515,8 @@ function A.Rotation(icon)
 	end 
 	
 	-- Queue System
-	if IsQueueReady(meta) then                                              
+	if IsQueueReady(meta) then
+		if meta == 3 then SetMetaAlpha(meta, 1) end
 		return QueueData[1]:Show(icon)				 
     end 
 	
@@ -538,6 +551,7 @@ function A.Rotation(icon)
 				-- ByPass Warlock's mechanic 
 				(playerClass ~= "WARLOCK" or Unit(unit):GetRange() <= 5)
 			then 
+				if meta == 3 then SetMetaAlpha(meta, 1) end
 				return A:Show(icon, CONST_AUTOATTACK)
 			end 
 		end 
@@ -545,16 +559,19 @@ function A.Rotation(icon)
 	
 	-- [3] Single / [4] AoE / [6-8] Passive: @player-party1-3, @raid1-3, @arena1-3 + Active: other AntiFakes
 	if metaobj(icon) then 
+		if meta == 3 then SetMetaAlpha(meta, 1) end
 		return true 
 	end 
 	
 	-- [3] Single / [4] AoE: AutoShoot
 	if useShoot and (meta == 3 or meta == 4) then 
+		if meta == 3 then SetMetaAlpha(meta, 1) end
 		return A:Show(icon, CONST_AUTOSHOOT)
 	end 
 	
 	-- [3] Set Class Portrait
 	if meta == 3 and not GetToggle(1, "DisableClassPortraits") then 
+		SetMetaAlpha(meta, 0)
 		return A:Show(icon, ClassPortaits[playerClass])
 	end 
 	
