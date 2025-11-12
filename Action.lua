@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "25.10.2025"
+local DateTime 														= "12.11.2025"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -51,9 +51,18 @@ local  HasWandEquipped 												=
 	_G.HasWandEquipped	  
 	  
 -- LetMeCast 	  
-local 	 DoEmote, 	 Dismount, 	  CancelShapeshiftForm 				=
-	  _G.DoEmote, _G.Dismount, _G.CancelShapeshiftForm
+local 	 Dismount, 	  CancelShapeshiftForm 							=
+	  _G.Dismount, _G.CancelShapeshiftForm
 	  
+local DoEmote = _G.DoEmote or function(emoteName, targetName, suppressMoveError)
+	if emoteName ~= nil then
+		return _G.C_ChatInfo.PerformEmote(emoteName, targetName, suppressMoveError)
+	else
+		_G.C_ChatInfo.CancelEmote()
+		return false
+	end
+end
+
 -- LetMeDrag
 local 	 EnumerateFrames, 	 GetCursorInfo							= 
 	  _G.EnumerateFrames, _G.GetCursorInfo

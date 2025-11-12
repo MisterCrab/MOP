@@ -1,49 +1,51 @@
-local ADDON_NAME 			= ...
-local PathToGreenTGA		= [[Interface\AddOns\]] .. ADDON_NAME .. [[\Media\Green.tga]]
+local ADDON_NAME 				= ...
+local PathToGreenTGA			= [[Interface\AddOns\]] .. ADDON_NAME .. [[\Media\Green.tga]]
 
 local _G, type, next, pairs, ipairs, select, unpack, table, setmetatable, math, string, error = 	
 	  _G, type, next, pairs, ipairs, select, unpack, table, setmetatable, math, string, error
 	  
-local maxn					= table.maxn
-local tinsert 				= table.insert		
-local tsort 				= table.sort
-local strgsub				= string.gsub
-local strgmatch				= string.gmatch
-local strlen				= string.len
-local huge 					= math.huge
-local wipe 					= _G.wipe
-local hooksecurefunc		= _G.hooksecurefunc	  
+local maxn						= table.maxn
+local tinsert 					= table.insert		
+local tsort 					= table.sort
+local strgsub					= string.gsub
+local strgmatch					= string.gmatch
+local strlen					= string.len
+local huge 						= math.huge
+local wipe 						= _G.wipe
+local hooksecurefunc			= _G.hooksecurefunc	  
 	  
-local TMW 					= _G.TMW
-local CNDT 					= TMW.CNDT
-local Env 					= CNDT.Env
+local TMW 						= _G.TMW
+local CNDT 						= TMW.CNDT
+local Env 						= CNDT.Env
 
-local A   					= _G.Action	
-local CONST 				= A.Const
-local Listener				= A.Listener
-local toNum 				= A.toNum
-local UnitCooldown			= A.UnitCooldown
-local CombatTracker			= A.CombatTracker
-local Unit					= A.Unit 
-local Player				= A.Player 
-local LoC 					= A.LossOfControl
-local MultiUnits			= A.MultiUnits
-local GetToggle				= A.GetToggle
-local BurstIsON				= A.BurstIsON
-local BuildToC				= A.BuildToC
-local Enum 					= A.Enum
-local TriggerGCD			= Enum.TriggerGCD
-local SpellDuration			= Enum.SpellDuration
-local SpellProjectileSpeed	= Enum.SpellProjectileSpeed
+local A   						= _G.Action	
+local CONST 					= A.Const
+local Listener					= A.Listener
+local toNum 					= A.toNum
+local UnitCooldown				= A.UnitCooldown
+local CombatTracker				= A.CombatTracker
+local Unit						= A.Unit 
+local Player					= A.Player 
+local LoC 						= A.LossOfControl
+local MultiUnits				= A.MultiUnits
+local GetToggle					= A.GetToggle
+local BurstIsON					= A.BurstIsON
+local BuildToC					= A.BuildToC
+local Enum 						= A.Enum
+local TriggerGCD				= Enum.TriggerGCD
+local SpellDuration				= Enum.SpellDuration
+local SpellProjectileSpeed		= Enum.SpellProjectileSpeed
+local SpellBookSpellBankPet 	= _G.Enum.SpellBookSpellBank.Pet
+local SpellBookSpellBankPlayer 	= _G.Enum.SpellBookSpellBank.Player
 
-local TRINKET1				= CONST.TRINKET1
-local TRINKET2				= CONST.TRINKET2
-local POTION				= CONST.POTION
-local EQUIPMENT_MANAGER		= CONST.EQUIPMENT_MANAGER
-local CACHE_DEFAULT_TIMER	= CONST.CACHE_DEFAULT_TIMER
-local SPELLID_FREEZING_TRAP = CONST.SPELLID_FREEZING_TRAP
+local TRINKET1					= CONST.TRINKET1
+local TRINKET2					= CONST.TRINKET2
+local POTION					= CONST.POTION
+local EQUIPMENT_MANAGER			= CONST.EQUIPMENT_MANAGER
+local CACHE_DEFAULT_TIMER		= CONST.CACHE_DEFAULT_TIMER
+local SPELLID_FREEZING_TRAP 	= CONST.SPELLID_FREEZING_TRAP
 
-local LibStub				= _G.LibStub
+local LibStub					= _G.LibStub
 
 -------------------------------------------------------------------------------
 -- Remap
@@ -116,8 +118,14 @@ local GetCVar				= C_CVar and C_CVar.GetCVar or _G.GetCVar
 local C_Spell				= _G.C_Spell
 local Spell					= _G.Spell
 
-local 	 IsPlayerSpell,    										IsUsableSpell, 											IsHelpfulSpell, 										 IsHarmfulSpell,    										 IsAttackSpell, 	 									 IsCurrentSpell =
-	  _G.IsPlayerSpell, C_Spell and C_Spell.IsSpellUsable or _G.IsUsableSpell, C_Spell and C_Spell.IsSpellHelpful or _G.IsHelpfulSpell, C_Spell and C_Spell.IsSpellHarmful or _G.IsHarmfulSpell, C_Spell and C_Spell.IsAutoAttackSpell or _G.IsAttackSpell, C_Spell and C_Spell.IsCurrentSpell or _G.IsCurrentSpell
+local C_SpellBook			= _G.C_SpellBook
+
+local                                         IsUsableSpell,                                          IsHelpfulSpell,                                          IsHarmfulSpell,                                             IsAttackSpell,                                          IsCurrentSpell,             IsSpellKnown =
+	  C_Spell and C_Spell.IsSpellUsable or _G.IsUsableSpell, C_Spell and C_Spell.IsSpellHelpful or _G.IsHelpfulSpell, C_Spell and C_Spell.IsSpellHarmful or _G.IsHarmfulSpell, C_Spell and C_Spell.IsAutoAttackSpell or _G.IsAttackSpell, C_Spell and C_Spell.IsCurrentSpell or _G.IsCurrentSpell, C_SpellBook.IsSpellKnown	
+
+local IsPlayerSpell 				= _G.IsPlayerSpell or function(spellID)
+	return IsSpellKnown(spellID, SpellBookSpellBankPlayer)
+end
 
 local 	  GetSpellTexture, 	  									  GetSpellLink,    									   GetSpellInfo, 											   GetSpellDescription, 											GetSpellCount,	   											GetSpellPowerCost, 	  CooldownDuration,    										   GetSpellCharges,    GetHaste, 	GetShapeshiftFormCooldown, 	  GetSpellBaseCooldown,    										   GetSpellAutocast = 
 	  TMW.GetSpellTexture, C_Spell and C_Spell.GetSpellLink or _G.GetSpellLink, C_Spell and C_Spell.GetSpellInfo or _G.GetSpellInfo, C_Spell and C_Spell.GetSpellDescription or _G.GetSpellDescription, C_Spell and C_Spell.GetSpellCastCount or _G.GetSpellCount, 	C_Spell and C_Spell.GetSpellPowerCost or _G.GetSpellPowerCost, Env.CooldownDuration, C_Spell and C_Spell.GetSpellCharges or _G.GetSpellCharges, _G.GetHaste, _G.GetShapeshiftFormCooldown, _G.GetSpellBaseCooldown, C_Spell and C_Spell.GetSpellAutoCast or _G.GetSpellAutocast
@@ -134,7 +142,6 @@ local 	 								  GetItemInfo, 	 									   GetItemIcon, 	  									   GetItem
 local TalentMap 					= A.TalentMap 
 
 -- Rank 
-local C_SpellBook					= _G.C_SpellBook
 local GetSpellBookItemName			= _G.GetSpellBookItemName or C_SpellBook.GetSpellBookItemName
 local FindSpellBookSlotBySpellID 	= _G.FindSpellBookSlotBySpellID
 
