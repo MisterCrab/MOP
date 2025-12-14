@@ -1,0 +1,152 @@
+[Warrior v22]
+PiercingHowl								- Will not be used on solo target unless Hamstring can't be used
+PiercingHowl and Hamstring 					- Now they are checking Slowed debuffs instead of their own
+DemoralizingShout							- Will be used against Warrior and Paladin (Retribution, Protection) with higher priority
+WarStomp, ConcussionBlow, IntimidatingShout - Added as AntiFake Interrupt
+
+[Warrior v21]
+Fixed lua error "Unit.lua:3730: Unit.lua Action.Unit():.. was used with 'nil' unitID"
+
+[Warrior v20]
+OilofImmolation						- Fixed wrong Type
+Overpower							- Added isSpecial flag skipping unwanted rage checks in PvP on Evasion and Deterrence if Overpower-PWR-Below is set to Auto
+PiercingHowl						- Will be used after Overpower prior Rend in PvP
+ShieldBlock							- Will be used when any hunter targets us and we're not in melee + required enabled toggles: PvP-SwapEquip, PvP-DefensiveStance
+SunderArmor							- Added extra logic to refresh applied debuff
+Trick								- Added queue up Cleave on AoE and normal rotation code will replace Heroic Strike (if its queued) by Cleave if 2+ targets with other conditions
+Whirlwind							- Replaced range check from 8 yards by spell Hamstring (~5 yards) to avoid misses
+BattleShout							- Will not be instantly rebuffed
+SunderArmor							- Added checkbox to prioritize debuff stacking in PvE
+Intercept 							- Will ignore stun immuned buffs on Free Action Potion
+Rotation will stop if player is channeling
+Leveling Rotation fixed lua error when mouseover unit frames
+Optimized code for MetaEngine release
+Optimized code for 5-Unit system release
+
+[Warrior v19]
+HeroicStrike						- Updated tooltip description for Trick
+DemoralizingShout					- When fighting alongside other DPS Demoralizing Shout will be used regularly
+OilofImmolation						- Added in rotation with slider in PvE section of the Warrior tab
+AutoTarget							- Updated for range API changes, added switch condition if nearest unit is in combat
+
+[Warrior v18]
+Rend 								- On level rotation will be skipped on Undead and Mechanical creatures
+
+[Warrior v17]
+Fixed LightofElune wrong ID
+Fixed Overpower miss typo preventing it using on Deterrence and Evasion
+
+[Warrior v16]
+Fixed ENV error
+
+[Warrior v15]
+Added support for gameplay as FuryTank through checkbox "PvE: Use 2 one-handed weapons as Tank role" (by default is disabled)
+
+[Warrior v14]
+Execute 							- Will not be pre-shown in pvp mode for next gcd timing or rage pooling
+Hamstring 							- Will be skipped on additional slow-immuned buffs
+Overpower 							- Will be used at highest spell priority on Evasion and Deterrence
+Intercept 							- Will not be used for 2 sec after Charge
+Disarm 								- Will be used on Holy Strength
+
+[Warrior v13]
+Upgraded code for synchronization with new interrupt system 
+Fixed CancelBuff miss typo  
+UI 									- Re-anchored main frame to make it easier drag able without open deep settings
+
+[Warrior v12]
+Cleave 								- Now will be forced if HeroicStrike is blocked by Set Blocker
+ShieldBlock							- Added slider in UI to control use by health percent
+
+[Warrior v11]
+Disabled cooldown text and swing pulse animation effects
+Added condition to skip totems as enemy unit around for AoE rotation 
+
+[Warrior v10]
+Taunt and MockingBlow				- Fixed issue when used at same time 
+Taunt and MockingBlow				- Added Stuned debuffs check  
+Taunt and MockingBlow				- Added check for exist own target  
+Taunt and MockingBlow				- Added check for casting  
+SunderArmor							- Added as last priority in taunt block if target has not enough threat with applied changes above (skipped if target has max stacks of the debuff or which can't be refreshed)
+
+[Warrior v9]
+Optimized code for more faster performance
+Fixed visual positions for lowest Queue Base buttons 
+Added more events in CLEU which will more accurate trigger to reset destGUID
+Recklessness						- Added new Queue Base button
+BattleShout							- Added condition to use it in PvP only if MS on cd or not learned or not in melee or enough rage to use both while MS on CD or unit already has MS debuff 
+SunderArmor							- Increased last used timer to make refresh at 5 stacks more often
+
+[Warrior v8]	
+Removed in some MSG LUA trash check conditions 
+Fixed lua miss typo with EnemyTeam and FriendlyTeam calls 
+SweepingStrikes						- Fixed Queue Base issue when current rage was less than deficit 
+Disarm 								- Added new Queue Base button to queue through combo: Stance Swap -> Bloodrage -> Disarm
+SwapEquip							- Added toggle in UI to hold 1h+shield up while nothing to do
+Perception							- Added invis catcher for duel and wpvp 
+PiercingHowl						- Fixed when it was used on mounted enemies instead of Hamstring
+ThunderClap							- Added imun check on bg 
+SunderArmor							- Reduced minimum required amount of enemies around to cycling through Auto Target (down from > 4 to >= 3)
+DemoralizingShout					- Fixed miss typo with unit count (was caused situation when it was over used at 3+ mobs instead of 7 and in 10 yards, yards were incorrect also)
+DemoralizingShout					- Added additional use priority in APL for solo if role is Tank
+
+[Warrior v7]
+Disarm								- Fixed bug when not worked for @target @mouseover in PvP
+
+[Warrior v6]
+Stance switch to primary when nothing to do will no longer change stance if you're out of melee, bypassed if available for Intercept in combat even if it's blocked in UI
+Hamstring							- Fixed issue when it was used in PvP while target imuned (caused by missed PvP state check, this option supposed only for PvE "Kiting mobs")
+Overpower							- Added condition to use OVP over priority BT-MS-SS and WW if in PvP and target has Evasion
+DefeanseStance						- Check nearest units in melee is reduced to 1 (down from 2) for PvP if relative toggle in UI is enabled 
+
+[Warrior v5]
+Added toggle in UI below "Rotation" header for use specified potion (default MightyRagePotion)
+Stoneform							- Now functional by using template from Core.lua
+HealingPotion						- Added 
+LimitedInvulnerabilityPotion		- Added 
+LivingActionPotion					- Added 
+RestorativePotion					- Added 
+SwiftnessPotion						- Added 
+Fixed Rend 							- miss typo to use on mouseover (it's only available for target)
+Hamstring 							- added condition to spam it whenever you have friendly shaman in group
+Bloodthirst							- added for late content of Classic when you reach 2K attack power it should be used between Executes (if possible) 
+SunderArmor							- added to track shared debuffs such as ExposeArmor
+
+[Warrior v4]
+Added Loss of Control frames
+Added condition to prevent actions from passive meta slots if something is already running in queue by Auto argument 
+Changed default state as false on first launch for rage save by HeroicStrike exploit
+Fixed isSafestThreatRotation		- miss typo (mostly seen with SunderArmor when it wasn't used in Tank role)
+
+[Warrior v3]
+Fixed Overpower 					- wasn't perform swing misses properly
+Fixed Bloodthirst					- will bypass option for heroic strike trick rage save 
+Fixed Bloodthirst					- more early pre use, now count current gcd with latency additionaly
+Fixed HeroicStrike					- was taken value from Cleave power slider 
+
+[Warrior v2]
+Rotation reworked with better CPU optimization
+HeroicStrike will exploit bug for damage increase if you playing with dual one hand weapons (StopCast checkbox must be enabled in General tab, required WeaponSwingTimer addon, itself checkbox for WeaponSwingTimer must be ON)
+HeroicStrike will be unqueued if you reached highest threat which stated on UI slider (StopCast checkbox must be enabled in General tab only for that)
+Burst timing adjusted by adding full gcd count in summary time 
+Execute will suspend rotation if time to die to 20% on target will less than next 3 times of full gcd (still bypassed by overpower)
+Whirlwind which is AoE 2+ units moved in priority below Execute 
+Fixed Execute 						- removed condition for safest threat rotation since Execute isn't caused high amount of threat
+Fixed MS BT 						- wrong rage calculation if you're not in berserker stance for WW
+Fixed MightyRagePotion				- will be used now if rage < 15 and target health percent <= 20 or rage < 25 otherwise 
+Fixed ShieldWall, LastStand			- unlogic usage by catch kill strike at begin of combat caused by invisible openers 
+Fixed Hamstring (Flurry spam) 		- will check now attack types instead of slow types 
+Fixed ShieldSlam PvP 				- purge on friendly target  
+Fixed ShieldSlam					- removed tank role check 
+Fixed Overpower						- conditions when he wasn't used sometimes in battle stance 
+Fixed SweepingStrikes				- more correctly rage calculation to use on upper sweepings
+Fixed SweepingStrikes				- missed rage limit 25 check (caused weird situations with stance swaps)
+Fixed HeroicStrike, Cleave 			- missed unqueue if execute up 
+Fixed PiercingHowl PvP 				- wrong unitID check in AoE 
+Fixed ChallengingShout				- wrong unitID check in AoE 
+Fixed Rend PvP 						- missed debuff check 
+Fixed @mouseover 					- wrong behavior (mostly seen with Taunt by @mouseover while you had @target at same time) 
+Fixed LUA error						- 759: attempt to index local 'icon' (a nil value)
+
+[Warrior v1]
+Release

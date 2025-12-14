@@ -1,5 +1,28 @@
 -- For All Indents And Purposes
 local revision = 23
+-- Maintainer: kristofer.karlsson@gmail.com
+
+-- For All Indents And Purposes -
+-- a indentation + syntax highlighting library
+-- All valid lua code should be processed correctly.
+
+-- Usage (for developers)
+--------
+-- Variant 1: - non embedded
+-- 1) Add ForAllIndentsAndPurposes to your dependencies (or optional dependencies)
+
+-- Variant 2: - embedded
+-- 1.a) Copy indent.lua to your addon directory
+-- 1.b) Put indent.lua first in your list of files in the TOC
+
+-- For both variants:
+-- 2) hook the editboxes that you want to have indentation like this:
+-- IndentationLib.enable(editbox [, colorTable [, tabWidth] ])
+-- if you don't select a color table, it will use the default.
+-- Read through this code for further usage help.
+-- (The documentation IS the code)
+
+-- luacheck: globals IndentationLib
 
 if not IndentationLib then
     IndentationLib = {}

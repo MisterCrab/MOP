@@ -1,12 +1,11 @@
-## Interface: 50501
-## Title: TellMeWhen |cff00ccffThe Action|r
+## Interface: 50503, 40402, 38000, 30405, 20505, 20504, 11508
+## Title: TellMeWhen |cff00ccff The Action|r
 ## Notes: (\/)O_O(\/)
 ## RequiredDeps: TellMeWhen
 ## DefaultState: enabled
 ## LoadWith: TellMeWhen
 ## SavedVariables: TheActionMOPSettings
 
-# Toaster
 Lib\Toaster\embeds.xml
 Lib\Toaster\Localization\enUS.lua
 Lib\Toaster\Localization\deDE.lua
@@ -28,16 +27,18 @@ Lib\LibBossIDs-1.0.lua
 Lib\LibDBIcon-1.0.lua
 Lib\StdUI\StdUi.xml
 
-# Classic Libs 
-Lib\LibSpellLock.lua
-Lib\LibAuraTypes.lua
+Lib\LibSpellLock.lua [AllowLoadGameType classic]
+Lib\LibAuraTypes.lua [AllowLoadGameType classic]
+Lib\LibClassicCasterino.lua [AllowLoadGameType vanilla]
+Lib\LibClassicDurations\LibClassicDurations.xml [AllowLoadGameType vanilla]
+Lib\LibHealComm-4.0\LibHealComm-4.0.xml [AllowLoadGameType vanilla, tbc]
 
-# First constans!
 Modules\Components\Const\Constans.lua
 
 Action.lua
 
-Modules\Components\Enum\TriggerGCD.lua
+Modules\Components\Enum\TriggerGCD_Mists.lua
+Modules\Components\Enum\TriggerGCD_Vanilla.lua [AllowLoadGameType vanilla]
 Modules\Components\Enum\SpellDuration.lua
 Modules\Components\Enum\SpellProjectileSpeed.lua
 Modules\Components\Tools.lua
@@ -62,6 +63,8 @@ Modules\Misc\HeroLib.lua
 Modules\Misc\PMultiplier.lua
 Modules\Misc\PrevSpell.lua 
 Modules\Misc\DRList.lua
+Modules\Misc\LibClassicCasterino.lua [AllowLoadGameType vanilla]
+Modules\Misc\LibHealComm.lua [AllowLoadGameType vanilla, tbc]
 Modules\Misc\StdUi.lua
 Modules\Misc\Toaster.lua
 Modules\Misc\ProfileSession.lua

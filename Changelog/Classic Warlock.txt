@@ -1,0 +1,40 @@
+[Warlock v9]
+Fixed endless summon on AUTO mode
+
+[Warlock v8]
+Optimized code for MetaEngine release
+Optimized code for 5-Unit system release
+
+[Warlock v7]
+Fixed issue when main DoTs doesn't applies in rare situation
+
+[Warlock v6]
+Removed retired interrupt groups
+Upgraded code for synchronization with new BossMods
+Upgraded code for synchronization with new interrupt system 
+Added casting internal latency, should help to fix double re-casting DoTs and summon pet
+DemonicSacrifice		- Added condition to check for last used time
+UI 						- Re-anchored main frame to make it easier drag able without open deep settings
+
+[Warlock v5]
+CreateHealthstone		- Fixed miss typo between Major and Minor IDs which caused bug to recast it over and over again 
+CreateHealthstone		- Added additional condition to prevent create new health stone if in the bag exist higher rank
+
+[Warlock v4]
+Disabled cooldown text and swing pulse animation effects
+BloodFury				- Fixed to use only if melee attacking
+
+[Warlock v3]
+Fixed lua error with toggle "Life Tap On Full Health"
+Fixed some wrong texts in UI
+Added IsSpellInFlight condition to all delayed cast spells
+ShadowBolt				- Added more higher priority to use it when ShadowTrance buff is up
+
+[Warlock v2]
+Fixed lua error :537 attempt to index field '?' (a number value)
+Added additional condition to don't cast any create stone spell if current
+DrainLife				- Fixed wrong 100 preset for toggle as default
+DrainLife				- Fixed priority of use (now after dots)
+
+[Warlock v1]
+Release

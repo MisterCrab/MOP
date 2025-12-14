@@ -249,7 +249,6 @@ function frame:SetColor(unitID)
 			colorA = 0
 		end
 		self.texture:SetColorTexture(colorR, colorG, colorB, colorA)
-		self.unit = unit 
 		self.unit = unit
 		self.mode = isFocusHealing
 		TMW:Fire("TMW_ACTION_METAENGINE_UPDATE", "HealingEngine", isFocusHealing and "focus" or "target", unit)

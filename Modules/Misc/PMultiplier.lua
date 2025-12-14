@@ -11,7 +11,7 @@ local Unit							= A.Unit
 local Class 						= A.PlayerClass	  
 
 local tremove						= table.remove
-local CombatLogGetCurrentEventInfo 	= _G.CombatLogGetCurrentEventInfo
+local CombatLogGetCurrentEventInfo 	= _G.CombatLogGetCurrentEventInfo or _G.C_CombatLog.GetCurrentEventInfo
 local UnitGUID 						= _G.UnitGUID
 	
 local ListenedSpells 				= {}

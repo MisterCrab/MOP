@@ -33,9 +33,9 @@ If you want to use custom API which spreads between your profiles then you have 
 Profile must have specific one local group. The groups are same like 'Profile Snippets' and 'Global Snippets' - groups are local (for this profile) and global (for all profiles)
 This specific group must have name "Shown Main" without quotes, it must contain at least 8 icons inside and should be in the upper left corner of the screen, like [1][2][3][4][5][6][7][8] ([1]-[8] columns in the single one row), type of group must be "Icon"
 * [1] is AntiFake CC rotation
-* [2] is AntiFake Interrupt rotation 	( @target, @focus, @mouseover, @targettarget, @focustarget; 											supports: racial and class's interrupts			                                 )
-* [3] is Rotation 						( @target, @focus, @mouseover, @targettarget, @focustarget; 											supports: all actions + Universal1-10			                                 )
-* [4] is Secondary rotation 			( @target, @focus, @mouseover, @targettarget, @focustarget; 											supports: all actions + Universal1-10			                                 )
+* [2] is AntiFake Interrupt rotation 	( @target, @focus (tbc+), @mouseover, @targettarget, @focustarget (tbc+); 								supports: racial and class's interrupts			                                 )
+* [3] is Rotation 						( @target, @focus (tbc+), @mouseover, @targettarget, @focustarget (tbc+); 								supports: all actions + Universal1-10			                                 )
+* [4] is Secondary rotation 			( @target, @focus (tbc+), @mouseover, @targettarget, @focustarget (tbc+); 								supports: all actions + Universal1-10			                                 )
 * [5] is Trinket rotation 				( @player; 																								supports: racial and class spells which can remove CC                            )
 * [6] is Passive rotation 				( 1th unit index: @arena1, @raid1, @party1, @arenapet1, @raidpet1, @partypet1 + Universal1-10 Unit1 + additional abilities that may appear in the launcher with note meta slot 6 or A[6] )
 * [7] is Passive / Active rotation 		( 2th unit index: @arena2, @raid2, @party2, @arenapet2, @raidpet2, @partypet2 + Universal1-10 Unit2) / AntiFake CC Focus rotation
@@ -52,7 +52,7 @@ Also your name of profile must be different than that ProfileInstall Import (fro
 
 
 Hard to figure? 
-Let's make it easier, I prepared template profile named '[GGL] Template', you can create new profile with own name and then use 'Copy' from '[GGL] Template' which will make for you prepared for 'The Action' API that group. So when all done you can build own routine now.
+Let's make it easier, I prepared template profile named '[GGL] Template' (or '[GGL] Basic'), you can create new profile with own name and then use 'Copy' from '[GGL] Template' (or '[GGL] Basic') which will make for you prepared for 'The Action' API that group. So when all done you can build own routine now.
 You can download this profile via Profile Install > Import (from server) but if this button is not enabled you can import any other profile to cut and paste specified requirements into new profile or just contact us.
 
 
@@ -61,7 +61,7 @@ You can download this profile via Profile Install > Import (from server) but if 
 -------------------------------------------------------------------------------
 Begin starts by profile create: Write in chat /tmw options go to 'General' then 'Main Options' (or 'Main Settings') and there are at the top you will see dropdown menu with current name of profile and below options 'Write Name' (to create new profile), 'Copy'
 
-Use template profile named '[GGL] Template' with own name either keep in mind and follow by the next tips:
+Use template profile named '[GGL] Template' (or '[GGL] Basic') with own name either keep in mind and follow by the next tips:
 1. Your profile name must be different than it have loaded from ProfileInstall > Import (*) TellMeWhen, otherwise it will be overwritten
 2. Your profile must have first group with name "Shown Main"
 3. "Shown Main" must have 8 or more icons with types "meta icon" and group type "Icon" in only 1 row at the left upper corner of your screen

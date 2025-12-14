@@ -506,7 +506,9 @@ local function _acquireToast(addonName)
     end
 
     toast:SetSize(DEFAULT_TOAST_WIDTH, DEFAULT_TOAST_HEIGHT)
-    toast:SetBackdrop(DEFAULT_TOAST_BACKDROP)
+	if toast.SetBackdrop then 
+		toast:SetBackdrop(DEFAULT_TOAST_BACKDROP)
+	end 
     toast:SetBackdropBorderColor(1, 1, 1)
 
     if _G.Toaster then
@@ -791,7 +793,7 @@ do
 
             local fontString = button:GetFontString()
             fontString:SetJustifyH("CENTER")
-            fontString:SetJustifyV("CENTER")
+            fontString:SetJustifyV("MIDDLE")
         end
 
         button:SetParent(toast)

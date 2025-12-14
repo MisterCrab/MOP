@@ -15,7 +15,7 @@ local isEnemy										= A.Bit.isEnemy
 local TeamCacheFriendly								= A.TeamCache.Friendly
 local TeamCacheFriendlyUNITs						= TeamCacheFriendly.UNITs	 
 	  
-local CombatLogGetCurrentEventInfo					= _G.CombatLogGetCurrentEventInfo		  
+local CombatLogGetCurrentEventInfo					= _G.CombatLogGetCurrentEventInfo or _G.C_CombatLog.GetCurrentEventInfo
 	  
 local 	 UnitIsUnit, 	UnitGUID, 	 UnitCanAttack 	= 
 	  _G.UnitIsUnit, _G.UnitGUID, _G.UnitCanAttack

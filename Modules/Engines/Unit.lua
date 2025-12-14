@@ -19,8 +19,11 @@ local AuraVariableNumber 					= Env.AuraVariableNumber
 local strlowerCache  						= TMW.strlowerCache
 
 local LibStub								= _G.LibStub
+local ThreatLib  							= LibStub("LibThreatClassic2", true) 	-- Any modern classic expansion now has built-in threat metrics. Compatible code will be keept for possible private servers.
+local HealComm 								= LibStub("LibHealComm-4.0", true) 		-- Any modern classic expansion now has built-in incoming healing prediction metrics (although for Classic HoTs are still not same like on retail). Compatible code will be keept for possible private servers.
 local LibRangeCheck  						= LibStub("LibRangeCheck-3.0")
 local LibBossIDs							= LibStub("LibBossIDs-1.0").BossIDs
+local LibClassicCasterino 					= LibStub("LibClassicCasterino", true)
 
 local A   									= _G.Action	
 local BuildToC								= A.BuildToC
@@ -39,6 +42,7 @@ local UnitInLOS								= A.UnitInLOS
 local UnitSpecsMap							= A.UnitSpecsMap
 
 local TeamCache								= A.TeamCache
+local TeamCachethreatData					= TeamCache.threatData
 local TeamCacheFriendly 					= TeamCache.Friendly
 local TeamCacheFriendlyUNITs				= TeamCacheFriendly.UNITs
 local TeamCacheFriendlyGUIDs				= TeamCacheFriendly.GUIDs
@@ -61,21 +65,36 @@ local TeamCacheEnemyDAMAGER_MELEE			= TeamCacheEnemy.DAMAGER_MELEE
 --local TeamCacheEnemyDAMAGER_RANGE			= TeamCacheEnemy.DAMAGER_RANGE
 local ActiveUnitPlates						= MultiUnits:GetActiveUnitPlates()
 local ActiveUnitPlatesAny					= MultiUnits:GetActiveUnitPlatesAny()
-
+	  
+local ALL_HEALS								= HealComm and HealComm.ALL_HEALS	  
 local CACHE_DEFAULT_TIMER_UNIT				= CONST.CACHE_DEFAULT_TIMER_UNIT
 
 local GameLocale 							= A.FormatGameLocale(_G.GetLocale())	  
-local CombatLogGetCurrentEventInfo			= _G.CombatLogGetCurrentEventInfo	  
+local CombatLogGetCurrentEventInfo			= _G.CombatLogGetCurrentEventInfo or _G.C_CombatLog.GetCurrentEventInfo
 local GetUnitSpeed							= _G.GetUnitSpeed
 local C_Spell								= _G.C_Spell
 local GetSpellName 							= C_Spell and C_Spell.GetSpellName or _G.GetSpellInfo
 local GetSpellInfo							= C_Spell and C_Spell.GetSpellInfo or _G.GetSpellInfo
 local GetPartyAssignment 					= _G.GetPartyAssignment	  
-local UnitIsUnit, UnitPlayerOrPetInRaid, UnitInAnyGroup, UnitPlayerOrPetInParty, UnitInRange, UnitInVehicle, UnitLevel, UnitThreatSituation, UnitRace, UnitClass, UnitGroupRolesAssigned, UnitClassification, UnitExists, UnitIsConnected, UnitIsCharmed, UnitIsGhost, UnitIsDeadOrGhost, UnitIsFeignDeath, UnitIsPlayer, UnitPlayerControlled, UnitCanAttack, UnitIsEnemy, UnitAttackSpeed,
+local UnitIsUnit, UnitPlayerOrPetInRaid, UnitInAnyGroup, UnitPlayerOrPetInParty, UnitInRange, UnitInVehicle, UnitLevel, UnitRace, UnitClass, UnitGroupRolesAssigned, UnitClassification, UnitExists, UnitIsConnected, UnitIsCharmed, UnitIsGhost, UnitIsDeadOrGhost, UnitIsFeignDeath, UnitIsPlayer, UnitPlayerControlled, UnitCanAttack, UnitIsEnemy, UnitAttackSpeed,
 	  UnitPowerType, UnitPowerMax, UnitPower, UnitName, UnitCanCooperate, UnitCreatureType, UnitCreatureFamily, UnitHealth, UnitHealthMax, UnitGetIncomingHeals, UnitGUID, UnitHasIncomingResurrection, UnitIsVisible, UnitGetTotalHealAbsorbs, UnitDebuff, UnitCastingInfo, UnitChannelInfo, UnitStagger =
-	  UnitIsUnit, UnitPlayerOrPetInRaid, UnitInAnyGroup, UnitPlayerOrPetInParty, UnitInRange, UnitInVehicle, UnitLevel, UnitThreatSituation, UnitRace, UnitClass, UnitGroupRolesAssigned, UnitClassification, UnitExists, UnitIsConnected, UnitIsCharmed, UnitIsGhost, UnitIsDeadOrGhost, UnitIsFeignDeath, UnitIsPlayer, UnitPlayerControlled, UnitCanAttack, UnitIsEnemy, UnitAttackSpeed,
+	  UnitIsUnit, UnitPlayerOrPetInRaid, UnitInAnyGroup, UnitPlayerOrPetInParty, UnitInRange, UnitInVehicle, UnitLevel, UnitRace, UnitClass, UnitGroupRolesAssigned, UnitClassification, UnitExists, UnitIsConnected, UnitIsCharmed, UnitIsGhost, UnitIsDeadOrGhost, UnitIsFeignDeath, UnitIsPlayer, UnitPlayerControlled, UnitCanAttack, UnitIsEnemy, UnitAttackSpeed,
 	  UnitPowerType, UnitPowerMax, UnitPower, UnitName, UnitCanCooperate, UnitCreatureType, UnitCreatureFamily, UnitHealth, UnitHealthMax, UnitGetIncomingHeals, UnitGUID, UnitHasIncomingResurrection, UnitIsVisible, UnitGetTotalHealAbsorbs, UnitDebuff, UnitCastingInfo, UnitChannelInfo, UnitStagger
+local UnitThreatSituation					= _G.UnitThreatSituation or function(unit, mob) return ThreatLib:UnitThreatSituation(unit, mob) end 
+local UnitDetailedThreatSituation			= _G.UnitDetailedThreatSituation or function(unit, mob) return ThreatLib:UnitDetailedThreatSituation(unit, mob) end 
 local UnitAura 								= _G.UnitAura or _G.C_UnitAuras.GetAuraDataByIndex
+-- Classic: UnitAura override through LibClassicDurations. Only for buffs on other units because debuffs are available since 1.15.
+if BuildToC < 20000 then
+	UnitAura 								= A.UnitAura or TMW.UnitAura or UnitAura
+end
+
+-- Classic
+if LibClassicCasterino then
+	-- To activate it
+	LibClassicCasterino.callbacks.OnUsed() 
+	UnitCastingInfo 						= function(unitID) return LibClassicCasterino:UnitCastingInfo(unitID) end
+	UnitChannelInfo 						= function(unitID) return LibClassicCasterino:UnitChannelInfo(unitID) end
+end
 -------------------------------------------------------------------------------
 -- Remap
 -------------------------------------------------------------------------------
@@ -157,592 +176,2663 @@ local Cache = {
 	end,
 }
 
-local AuraList = {
-    -- CC SCHOOL TYPE 
-    Magic = {
-        28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
-        11446, -- Mind Control                
-        10955, -- Shackle Undead
-        20066, -- Repentance          
-        60192, -- Freezing Arrow (hunter pvp)        
-        6358, -- Seduction
-        47860, -- Death Coil
-        31661, -- Dragon's Breath
-        15487, -- Silence        
-        48827, -- Avenger's Shield
-        49916, -- Strangulate
-        49203, -- Hungering Cold (DK frost talent)
-        47843, -- Unstable Affliction
-        10308, -- Hammer of Justice
-        64044, -- Psychic Horror
-        47847, -- Shadowfury
-		1122, -- Summon Infernal (Inferno)
-		59672, -- Metamorphosis (Demonology)
-    },
-    MagicRooted = {
-        53313, -- Entangling Roots
-        42917, -- Frost Nova
-        45524, -- Chains of Ice
-    }, 
-    Curse = {
-        51514, -- Hex   
-        11719, -- Curse of Tongues
-        50511, -- Curse of Weakness
-    },
-    Disease = {
-        196782, -- Outbreak (5 sec infecting dot)
-        191587, -- Outbreak (21+ sec dot)
-        48483, 48484, 48485, -- Infected Wounds (Feral slow)
-        59879, -- Blood Plague
-        59921, -- Frost Fever
-    },
-    Poison = {
-        3034, -- Viper Sting
-        3043, -- Scorpid Sting
-    },
-    Physical = {
-        5246, -- Intimidating Shout
-        2094, -- Blind
-        19503, -- Scatter Shot (hunter pvp talent)
-        1833, -- Cheap Shot
-        8643, -- Kidney Shot
-        8983, -- Bash
-        16940, 16941, -- Brutal Impact (r1&2)
-        19577, -- Intimidation
-        49803, -- Pounce
-        199804, -- Between the Eyes
-        49802, -- Maim
-        47481, -- Gnaw (DK pet)
-        51722, -- Dismantle
-        676, -- Disarm        
-		46968, -- Shockwave
-		20549, -- War Stomp
-    },
-    -- CC CONTROL TYPE
-    CrowdControl = {
-        -- Deprecated
-    },
-    Incapacitated = {
-		-- Druid
-		49802, -- Maim (Feral PvP talent)
-		-- Hunter 
-		19503, -- Scatter Shot 
-        60192, -- Freezing Arrow (hunter pvp)  
-		-- Mage 
-        28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey) 
-		-- Paladin 
-        20066, -- Repentance 
-		-- Priest 
-		10955, -- Shackle Undead
-		-- Shaman		
-        51514, -- Hex (also 211004, 210873, 211015, 211010)   
-		-- Warlock 
-		710, 18647, -- Banish
-    },
-    Disoriented = {
-		-- Death Knight
-		-- Druid 
-		33786, -- Cyclone 
-		-- Hunter
-		-- Mage 
-		31661, -- Dragon's Breath (Fire)
-        -- Paladin 
-		-- Priest
-		-- 226943, -- Mind Bomb
-		-- Rogue 
-        2094, -- Blind		
-		-- Warlock
-		115268, -- Mesmerize (Shivarra)
-		6358, -- Seduction (Succubus)
-		-- Warrior
-		5246, -- Intimidating Shout
-    },    
-    Fear = {
-        5246, -- Intimidating Shout
-    },
-    Charmed = {
-		-- Deprecated
-        11446, -- Mind Control                  
-        10955, -- Shackle Undead
-    },
-    Sleep = {
-    },
-    Stuned = {
-		-- Death Knight 
-        47481, -- Gnaw (pet)
-        49203, -- Hungering Cold
-		-- Druid 
-		49802, -- Maim
-        49803, -- Pounce
-		-- Hunter 
-        19577, -- Intimidation (pet)
-		-- Paladin 
-		10308, -- Hammer of Justice
-		-- Priest 
-		64044, -- Psychic Horror
-		-- Rogue 
-		1833, -- Cheap Shot 
-        408, -- Kidney Shot 
-		-- Warlock 
-        47847, -- Shadowfury
-        -- 89766, -- Axe Toss (pet)
-		1122, -- Summon Infernal (Inferno)
-		-- Warrior 
-        46968, -- Shockwave 
-        7922, -- Charge Stun
-		-- Tauren
-		20549, -- War Stomp
-		-- Kul Tiran
-    },
-    PhysStuned = {
-		-- Death Knight 
-		47481, -- Gnaw (pet)
-		-- Druid 
-        49802, -- Maim
-		-- 163505, -- Rake
-        49803, -- Pounce
-        8983, -- Bash
-        16940, 16941, -- Brutal Impact (r1&2)
-		-- Hunter 
-        19577, -- Intimidation (pet)
-        -- Rogue 
-        1833, -- Cheap Shot 
-        408, -- Kidney Shot 
-        -- Druid 
-		49802, -- Maim
-        49803, -- Pounce
-        8983, -- Bash
-        16940, 16941, -- Brutal Impact (r1&2)
-		-- Warrior 
-        46968, -- Shockwave 
-        7922, -- Charge Stun
-		-- Tauren
-		20549, -- War Stomp
-    },
-    Silenced = {
-		-- Death Knight 
-		49916, -- Strangulate (Unholy/Blood)
-		-- Hunter 
-        34490, -- Silencing Shot
-		-- Paladin 
-        48827, -- Avenger's Shield	(Prot)	
-		-- Priest 
-        15487, -- Silence (Shadow)    
-		-- Rogue 		
-        1330, -- Garrote - Silence				
-        -- Warlock         
-        31117, -- Unstable Affliction -- Not 100% sure
-    },
-    Disarmed = {
-		-- Rogue 
-        51722, -- Dismantle
-		-- Warrior 
-        676, -- Disarm  
-    }, 
-    Rooted = {
-        53313, -- Entangling Roots Dispel able 
-        64695, -- Earthgrab
-        51485, -- Storm earth and fire
-        42917, -- Frost Nova
-        33395, -- Freeze (frost mage water elemental)
-        45334, -- Immobilized (wild charge, bear form) 
-        12289, 12668, 23695, -- Improved Hamstring (r1,2,3)     
-        19185, 64803, 64804, -- Entrapment (r1&2&3)
-        55509, -- Venom Web Spray (Hunter pet)
-    },  
-    Slowed = {
-        42842, -- Frostbolt
-        42931, -- Cone of Cold
-        42945, -- Blast Wave
-        1715, -- Hamstring
-        3775, -- Crippling Poison
-        3600, -- Earthbind
-        5116, -- Concussive Shot
-        7301, -- Frost Armor
-        48674, -- Deadly Throw
-        45524, -- Chains of Ice
-        50259, -- Dazed (Wild Charge, druid talent, cat form)
-        53227, -- Typhoon
-        12323, -- Piercing Howl
-        71647, -- Ice Trap
-        48156, -- Mind Flay
-        31589, -- Slow
-        48483, 48484, 48485, -- Infected Wounds
-        64186, -- Frostbrand Attack
-        53575, -- Tendon Rip (Hunter pet)
-        2974, -- Wing Clip
-        49236, -- Frost Shock
-        16927, -- Chilled (frost mage effect)
-        55741, 68766, -- Desecration (DK unholy talent)
-        50040, 50041, 50043, -- Chilblains (DK frost talent r1,2,3)
-        42931, -- Cone of Cold (frost mage)
-        53407, -- Judgement of Justice
-    },
-    MagicSlowed = {
-        42842, -- Frostbolt
-        42931, -- Cone of Cold       
-        3600, -- Earthbind
-        7301, -- Frost Armor
-        53227, -- Typhoon
-        64186, -- Frostbrand Attack
-        49236, -- Frost Shock
-        16927, -- Chilled (frost mage effect)
-        42931, -- Cone of Cold (frost mage)
-    },
-    BreakAble = {
-        28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
-        20066, -- Repentance
-        51514, -- Hex
-        60192, -- Freezing Arrow
-        6358, -- Seduction
-        2094, -- Blind
-        5246, -- Intimidating Shout
-        31661, -- Dragon's Breath
-        19503, -- Scatter Shot        
-        -- Rooted CC
-        --53313, -- Entangling Roots
-        --42917, -- Frost Nova
-    },
-    -- Imun Specific Buffs 
-    FearImun = {
-        34692, -- The Beast Within (Hunter BM PvP)
-        49039, -- Lichborne
-        8143, -- Tremor Totem 
-    },
-    StunImun = {
-        48792, -- Icebound Fortitude
-        6615, -- Free Action (Potion)
-        1953, -- Blink (micro buff)
-        46924, -- Bladestorm
-    },        
-    Freedom = {
-        1044, -- Hand of Freedom
-        46924, -- Bladestorm
-        53271, -- Master's Call    
-    },
-    TotalImun = {
-		710, 18647, -- Banish
-        642, -- Divine Shield
-        45438, -- Ice Block
-        20711, -- Spirit of Redemption
-    },
-    DamagePhysImun = {
-        10278, -- Hand of Protection
-        642, -- Bubble
-    },    
-    DamageMagicImun = {    -- When we can't totally damage    
-        31224, -- Cloak of Shadows
-    }, 
-    CCTotalImun = {
-        46924, -- Bladestorm   
-    },     
-    CCMagicImun = {
-        31224, -- Cloak of Shadows
-        48707, -- Anti-Magic Shell    
-        8178, -- Grounding Totem Effect
-        23920, -- Spell Reflection
-    }, 
-    Reflect = {            -- Only to cancel reflect effect  
-        8178, -- Grounding Totem Effect
-        23920, -- Spell Reflection
+local AuraList
+if BuildToC >= 50000 then
+	AuraList = {
+		-- CC SCHOOL TYPE 
+		Magic = {
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			11446, -- Mind Control                
+			10955, -- Shackle Undead
+			20066, -- Repentance          
+			60192, -- Freezing Arrow (hunter pvp)        
+			6358, -- Seduction
+			47860, -- Death Coil
+			31661, -- Dragon's Breath
+			15487, -- Silence        
+			48827, -- Avenger's Shield
+			49916, -- Strangulate
+			49203, -- Hungering Cold (DK frost talent)
+			47843, -- Unstable Affliction
+			10308, -- Hammer of Justice
+			64044, -- Psychic Horror
+			47847, -- Shadowfury
+			1122, -- Summon Infernal (Inferno)
+			59672, -- Metamorphosis (Demonology)
+		},
+		MagicRooted = {
+			53313, -- Entangling Roots
+			42917, -- Frost Nova
+			45524, -- Chains of Ice
+		}, 
+		Curse = {
+			51514, -- Hex   
+			11719, -- Curse of Tongues
+			50511, -- Curse of Weakness
+		},
+		Disease = {
+			196782, -- Outbreak (5 sec infecting dot)
+			191587, -- Outbreak (21+ sec dot)
+			48483, 48484, 48485, -- Infected Wounds (Feral slow)
+			59879, -- Blood Plague
+			59921, -- Frost Fever
+		},
+		Poison = {
+			3034, -- Viper Sting
+			3043, -- Scorpid Sting
+		},
+		Physical = {
+			5246, -- Intimidating Shout
+			2094, -- Blind
+			19503, -- Scatter Shot (hunter pvp talent)
+			1833, -- Cheap Shot
+			8643, -- Kidney Shot
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			19577, -- Intimidation
+			49803, -- Pounce
+			199804, -- Between the Eyes
+			49802, -- Maim
+			47481, -- Gnaw (DK pet)
+			51722, -- Dismantle
+			676, -- Disarm        
+			46968, -- Shockwave
+			20549, -- War Stomp
+		},
+		-- CC CONTROL TYPE
+		CrowdControl = {
+			-- Deprecated
+		},
+		Incapacitated = {
+			-- Druid
+			49802, -- Maim (Feral PvP talent)
+			-- Hunter 
+			19503, -- Scatter Shot 
+			60192, -- Freezing Arrow (hunter pvp)  
+			-- Mage 
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey) 
+			-- Paladin 
+			20066, -- Repentance 
+			-- Priest 
+			10955, -- Shackle Undead
+			-- Shaman		
+			51514, -- Hex (also 211004, 210873, 211015, 211010)   
+			-- Warlock 
+			710, 18647, -- Banish
+		},
+		Disoriented = {
+			-- Death Knight
+			-- Druid 
+			33786, -- Cyclone 
+			-- Hunter
+			-- Mage 
+			31661, -- Dragon's Breath (Fire)
+			-- Paladin 
+			-- Priest
+			-- 226943, -- Mind Bomb
+			-- Rogue 
+			2094, -- Blind		
+			-- Warlock
+			115268, -- Mesmerize (Shivarra)
+			6358, -- Seduction (Succubus)
+			-- Warrior
+			5246, -- Intimidating Shout
+		},    
+		Fear = {
+			5246, -- Intimidating Shout
+		},
+		Charmed = {
+			-- Deprecated
+			11446, -- Mind Control                  
+			10955, -- Shackle Undead
+		},
+		Sleep = {
+		},
+		Stuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			49203, -- Hungering Cold
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Paladin 
+			10308, -- Hammer of Justice
+			-- Priest 
+			64044, -- Psychic Horror
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Warlock 
+			47847, -- Shadowfury
+			-- 89766, -- Axe Toss (pet)
+			1122, -- Summon Infernal (Inferno)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+			-- Kul Tiran
+		},
+		PhysStuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			-- Druid 
+			49802, -- Maim
+			-- 163505, -- Rake
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+		},
+		Silenced = {
+			-- Death Knight 
+			49916, -- Strangulate (Unholy/Blood)
+			-- Hunter 
+			34490, -- Silencing Shot
+			-- Paladin 
+			48827, -- Avenger's Shield	(Prot)	
+			-- Priest 
+			15487, -- Silence (Shadow)    
+			-- Rogue 		
+			1330, -- Garrote - Silence				
+			-- Warlock         
+			31117, -- Unstable Affliction -- Not 100% sure
+		},
+		Disarmed = {
+			-- Rogue 
+			51722, -- Dismantle
+			-- Warrior 
+			676, -- Disarm  
+		}, 
+		Rooted = {
+			53313, -- Entangling Roots Dispel able 
+			64695, -- Earthgrab
+			51485, -- Storm earth and fire
+			42917, -- Frost Nova
+			33395, -- Freeze (frost mage water elemental)
+			45334, -- Immobilized (wild charge, bear form) 
+			12289, 12668, 23695, -- Improved Hamstring (r1,2,3)     
+			19185, 64803, 64804, -- Entrapment (r1&2&3)
+			55509, -- Venom Web Spray (Hunter pet)
+		},  
+		Slowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold
+			42945, -- Blast Wave
+			1715, -- Hamstring
+			3775, -- Crippling Poison
+			3600, -- Earthbind
+			5116, -- Concussive Shot
+			7301, -- Frost Armor
+			48674, -- Deadly Throw
+			45524, -- Chains of Ice
+			50259, -- Dazed (Wild Charge, druid talent, cat form)
+			53227, -- Typhoon
+			12323, -- Piercing Howl
+			71647, -- Ice Trap
+			48156, -- Mind Flay
+			31589, -- Slow
+			48483, 48484, 48485, -- Infected Wounds
+			64186, -- Frostbrand Attack
+			53575, -- Tendon Rip (Hunter pet)
+			2974, -- Wing Clip
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			55741, 68766, -- Desecration (DK unholy talent)
+			50040, 50041, 50043, -- Chilblains (DK frost talent r1,2,3)
+			42931, -- Cone of Cold (frost mage)
+			53407, -- Judgement of Justice
+		},
+		MagicSlowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold       
+			3600, -- Earthbind
+			7301, -- Frost Armor
+			53227, -- Typhoon
+			64186, -- Frostbrand Attack
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			42931, -- Cone of Cold (frost mage)
+		},
+		BreakAble = {
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			20066, -- Repentance
+			51514, -- Hex
+			60192, -- Freezing Arrow
+			6358, -- Seduction
+			2094, -- Blind
+			5246, -- Intimidating Shout
+			31661, -- Dragon's Breath
+			19503, -- Scatter Shot        
+			-- Rooted CC
+			--53313, -- Entangling Roots
+			--42917, -- Frost Nova
+		},
+		-- Imun Specific Buffs 
+		FearImun = {
+			34692, -- The Beast Within (Hunter BM PvP)
+			49039, -- Lichborne
+			8143, -- Tremor Totem 
+		},
+		StunImun = {
+			48792, -- Icebound Fortitude
+			6615, -- Free Action (Potion)
+			1953, -- Blink (micro buff)
+			46924, -- Bladestorm
+		},        
+		Freedom = {
+			1044, -- Hand of Freedom
+			46924, -- Bladestorm
+			53271, -- Master's Call    
+		},
+		TotalImun = {
+			710, 18647, -- Banish
+			642, -- Divine Shield
+			45438, -- Ice Block
+			20711, -- Spirit of Redemption
+		},
+		DamagePhysImun = {
+			10278, -- Hand of Protection
+			642, -- Bubble
+		},    
+		DamageMagicImun = {    -- When we can't totally damage    
+			31224, -- Cloak of Shadows
+		}, 
+		CCTotalImun = {
+			46924, -- Bladestorm   
+		},     
+		CCMagicImun = {
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+		}, 
+		Reflect = {            -- Only to cancel reflect effect  
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
 
-    }, 
-    KickImun = { -- Imun Silence too
-        31821, -- Aura mastery
-    },
-    -- Purje 
-    ImportantPurje = {
-        10278, -- Hand of Protection
-        11129, -- Combustion 
-        10060, -- Power Infusion
-        12042, -- Arcane Power 
-        12472, -- Icy Veins
-        20216, -- Divine Favor 
-    },
-    SecondPurje = {
-        1044, -- Hand of Freedom      
-        -- We need purje druid only in bear form 
-        48451, -- Lifebloom
-        48441, -- Rejuvenation
-        -- 155777, -- Rejuvenation (Germination)
-        53251, -- Wild Growth    
-        48443, -- Regrowth
-        48469, 48470, -- Mark of the Wild & Gift of the Wild
-    },
-    PvEPurje = {
-        197797, 210662, 211632, 209033, 198745, 194615, 282098, 301629, 297133, 266201, 258938, 268709, 268375, 274210, 276265,
-    },
-    -- Speed 
-    Speed = {
-        11305, -- Sprint
-        2379, -- Speed (Swiftness Potion)
-        2645, -- Ghost Wolf
-        7840, -- Swim Speed (Swim Speed Potion)
-        36554, -- Shadowstep
-        54861, -- Nitro Boosts
-        -- 58875, -- Spirit Walk
-        64127, 64129, -- Body and Soul (r1,2)
-        -- 68992, -- Darkflight
-        -- 85499, -- Speed of Light
-        -- 87023, -- Cauterize
-        31641, 31642, -- Blazing Speed (r1,2)
-        33357, -- Dash
-        -- 77761, -- Stampeding Roar
-        -- 111400, -- Burning Rush
-        -- 116841, -- Tiger's Lust
-        -- 118922, -- Posthaste
-        -- 119085, -- Chi Torpedo
-        -- 121557, -- Angelic Feather
-        -- 137452, -- Displacer Beast
-        -- 137573, -- Burst of Speed
-        -- 192082, -- Wind Rush (shaman wind rush totem talent)
-        -- 196674, -- Planewalker (warlock artifact trait)
-        -- 197023, -- Cut to the chase (rogue pvp talent)
-        -- 199407, -- Light on your feet (mistweaver monk artifact trait)
-        -- 201233, -- whirling kicks (windwalaker monk pvp talent)
-        -- 201447, -- Ride the wind (windwalaker monk pvp talent)
-        -- 209754, -- Boarding Party (rogue pvp talent)
-        -- 210980, -- Focus in the light (holy priest artifact trait)
-        -- 213177, -- swift as a coursing river (brewmaster artifact trait)
-        -- 214121, -- Body and Mind (priest talent)
-        -- 215572, -- Frothing Berserker (warrior talent)
-        -- 231390, -- Trailblazer (hunter talent)
-        5118, 13159,  -- Aspect of the Cheetah & Aspect of the Pack
-        -- 204475, -- Windburst (marks hunter artifact ability)        
-    },
-    -- Deff 
-    DeffBuffsMagic = {
-        -- 116849, -- Life Cocoon
-        50720, -- Vigilance
-        47788, -- Guardian Spirit
-        -- 31850, -- Ardent Defender 
-        64205, -- Divine Sacrifice 
-        53527, -- Divine Guardian
-        871, -- Shield Wall
-        -- 118038, -- Die by the Sword 
-        -- 104773, -- Unending Resolve        
-        -- 108271, -- Astral Shift
-        6940, -- Hand of Sacrifice
-        31224, -- Cloak of Shadows
-        48707, -- Anti-Magic Shell    
-        8178, -- Grounding Totem Effect
-        23920, -- Spell Reflection
-        -- 213915, -- Mass reflect
-        -- 212295, -- Nether Ward (Warlock)
-        33206, -- Pain Suppression
-        47585, -- Dispersion
-        -- 186265, -- Aspect of Turtle
-        -- 115176, -- Zen Meditation
-        -- 122783, -- Diffuse Magic
-        -- 86659, -- Guardian of Ancient Kings
-        642, -- Divine Shield
-        45438, -- Ice Block
-        -- 122278, -- Dampen Harm 
-        61336, -- Survival Instincts -- Believe this is physical?
-        45182, -- Cheating Death
-        31230, -- Cheat Death
-        -- 204018, -- Blessing of Spellwarding
-        -- 196555, -- Netherwalk
-        -- 206803, -- Rain from Above
-    }, 
-    DeffBuffs = {        
-        -- 76577, -- Smoke Bomb
-        -- 53480, -- Road of Sacriface
-        -- 116849, -- Life Cocoon
-        50720, -- Vigilance
-        47788, -- Guardian Spirit
-        -- 31850, -- Ardent Defender        
-        871, -- Shield Wall
-        -- 118038, -- Die by the Sword        
-        -- 104773, -- Unending Resolve
-        6940, -- Hand of Sacrifice
-        -- 108271, -- Astral Shift
-        30823, -- Shamanistic Rage
-        26669, -- Evasion
-        22812, -- Ironbark
-        10278, -- Hand of Protection
-        -- 74001, -- Combat Readiness
-        31224, -- Cloak of Shadows
-        33206, -- Pain Suppression
-        47585, -- Dispersion
-        -- 186265, -- Aspect of Turtle
-        48792, -- Icebound Fortitude
-        49222, -- Bone Shield (DK UH talent)
-        -- 115176, -- Zen Meditation
-        -- 122783, -- Diffuse Magic
-        -- 86659, -- Guardian of Ancient Kings
-        642, -- Divine Shield
-        45438, -- Ice Block
-        498, -- Divine Protection
-        -- 157913, -- Evanesce
-        -- 115203, -- Fortifying Brew
-        22812, -- Barkskin
-        -- 122278, -- Dampen Harm        
-        61336, -- Survival Instincts
-        22842, -- Frenzied Regeneration
-        45182, -- Cheating Death
-        31230, -- Cheat Death
-        -- 198589, -- Blur    
-        -- 196555, -- Netherwalk
-        -- 243435, -- Fortifying Brew
-        -- 206803, -- Rain from Above
-    },    
-    -- Damage buffs / debuffs
-    Rage = {
-        18499, -- Berserker Rage
-        12880, 14201, 14202, 14203, 14204, -- Enrage (Fury talent r1,2,3,4,5)
-        12292, -- Death Wish
-    }, 
-    DamageBuffs = {        
-        51690, -- Killing Spree
-        51713, -- Shadow Dance
-        13750, -- Adrenaline Rush
-        59672, -- Metamorphosis (demonology)
-        34692, -- The Beast Within 
-        3045, -- Rapid Fire
-        53434, -- Call of the Wild (Hunter pet)
-        1719, -- Recklessness
-        -- 193530, -- Aspect of the Wild (small burst)
-        -- 266779, -- Coordinated Assault
-        -- 193526, -- Trueshot
-        50213, -- Tiger's Fury (small burst)
-        50334, -- Berserk 
-        -- 102560, -- Incarnation: Chosen of Elune
-        -- 102543, -- Incarnation: King of the Jungle
-        11129, -- Combustion 
-        12042, -- Arcane Power                
-        12472, -- Icy Veins
-        12043, -- Presence of Mind (magic)
-        55342, -- Mirror Image
-        -- 51271, -- Pillar of Frost
-        49016, -- Unholy Frenzy 
-        31884, -- Avenging Wrath
-        -- 236321, -- Warbanner
-        -- 107574, -- Avatar        
-        -- 114050, -- Ascendance
-        16166, -- Elemental Mastery 
-        -- 113858, -- Dark Soul: Instability
-        -- 267217, -- Nether Portal
-        -- 113860, -- Dark Soul: Misery
-        -- 137639, -- Storm, Earth, and Fire
-        -- 152173, -- Serenity
-		51271, -- Pillar of Frost
-		85696, -- Zealotry
-		85730, -- Deadly Calm
-		77801, -- Demon Soul
-    },
-    DamageBuffs_Melee = {        
-        51690, -- Killing Spree
-        -- 121471, -- Shadow of Blades
-        51713, -- Shadow Dance
-        13750, -- Adrenaline Rush
-        1719, -- Recklessness
-        12292, -- Death Wish
-        -- 59672, -- Metamorphosis (demonology)
-        -- 266779, -- Coordinated Assault
-        50334, -- Berserk 
-        102543, -- Incarnation: King of the Jungle
-        -- 51271, -- Pillar of Frost
-        49016, -- Unholy Frenzy 
-        31884, -- Avenging Wrath
-        -- 236321, -- Warbanner
-        -- 107574, -- Avatar        
-        -- 114050, -- Ascendance
-        -- 137639, -- Storm, Earth, and Fire
-        -- 152173, -- Serenity
-		51271, -- Pillar of Frost
-		85696, -- Zealotry
-		85730, -- Deadly Calm		
-    },
-    BurstHaste = {
-        -- 90355, -- Ancient Hysteria
-        -- 146555, -- Drums of Rage
-        -- 178207, -- Drums of Fury
-        -- 230935, -- Drums of the Mountain
-        2825, -- Bloodlust
-        -- 80353, -- Time Warp
-        -- 160452, -- Netherwinds
-        32182, -- Heroism
-    },
-    -- SOME SPECIAL
-    DamageDeBuffs = {
-        -- 79140, -- Vendetta (debuff)
-        -- 115080, -- Touhc of Death (debuff)
-        -- 122470, -- KARMA
-    }, 
-    Flags = {
-        301091, -- Alliance flag
-        301089,  -- Horde flag 
-        34976,  -- Netherstorm Flag
-        -- 121164, -- Orb of Power
-    }, 
-    -- Cast Bars
-    Reshift = {
-        {118, 45}, -- Polymorph (45 coz of blink available)
-        {20066, 30}, -- Repentance 
-        {51514, 30}, -- Hex 
-        -- {19386, 40}, -- Wyvern Sting
-    },
-    Premonition = {
-        -- {113724, 30}, -- Ring of Frost 
-        {118, 45}, -- Polymorph (45 coz of blink available while cast)
-        {20066, 30}, -- Repentance 
-        {51514, 30}, -- Hex 
-    },
-    CastBarsCC = {
-        -- 113724, -- Ring of Frost
-        28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
-        -- 20066, -- Repentance
-        51514, -- Hex
-        -- 19386, -- Wyvern Sting
-        33786, -- Cyclone
-        11446, -- Mind Control   
-    },
-    AllPvPKickCasts = {    
-        28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
-        20066, -- Repentance
-        51514, -- Hex
-        -- 19386, -- Wyvern Sting -- Instant in wrath
-        33786, -- Cyclone
-        11446, -- Mind Control 
-        982, -- Revive Pet 
-        32375, -- Mass Dispel 
-        -- 203286, -- Greatest Pyroblast
-        59172, -- Chaos Bolt 
-        48477, -- Rebirth
-        -- 203155, -- Sniper Shot 
-        53007, -- Penance
-        48072, -- Prayer of Healing
-        6064, -- Heal
-        48070, -- Flash Heal
-        48120, -- Binding Heal                        (priest, holy)
-        -- 48113, -- Prayer of Mending (Instant in wrath)
-        64843, -- Divine Hymn
-        -- 120517, -- Halo                                (priest, holy/disc)
-        33247, -- Shadow Mend
-        -- 194509, -- Power Word: Radiance
-        -- 265202, -- Holy Word: Salvation                (priest, holy)
-        48063, -- Greater Heal                        (priest, holy)
-        48447, -- Tranquility
-        48443, -- Regrowth
-        -- 53251, -- Wild Growth -- Instant in wrath
-        50464, -- Nourish                             (druid, restoration)
-        55459, -- Chain Heal
-        -- 8004, -- Healing Surge
-        -- 73920, -- Healing Rain
-        49273, -- Healing Wave
-        49276, -- Lesser Healing Wave
-        -- 197995, -- Wellspring                          (shaman, restoration)
-        -- 207778, -- Downpour                            (shaman, restoration)
-        48785, -- Flash of Light
-        48782, -- Holy Light
-        -- 116670, -- Vivify
-        -- 124682, -- Enveloping Mist
-        -- 191837, -- Essence Font
-        -- 209525, -- Soothing Mist
-        -- 227344, -- Surging Mist                        (monk, mistweaver)
-    },    
-}
+		}, 
+		KickImun = { -- Imun Silence too
+			31821, -- Aura mastery
+		},
+		-- Purje 
+		ImportantPurje = {
+			10278, -- Hand of Protection
+			11129, -- Combustion 
+			10060, -- Power Infusion
+			12042, -- Arcane Power 
+			12472, -- Icy Veins
+			20216, -- Divine Favor 
+		},
+		SecondPurje = {
+			1044, -- Hand of Freedom      
+			-- We need purje druid only in bear form 
+			48451, -- Lifebloom
+			48441, -- Rejuvenation
+			-- 155777, -- Rejuvenation (Germination)
+			53251, -- Wild Growth    
+			48443, -- Regrowth
+			48469, 48470, -- Mark of the Wild & Gift of the Wild
+		},
+		PvEPurje = {
+			197797, 210662, 211632, 209033, 198745, 194615, 282098, 301629, 297133, 266201, 258938, 268709, 268375, 274210, 276265,
+		},
+		-- Speed 
+		Speed = {
+			11305, -- Sprint
+			2379, -- Speed (Swiftness Potion)
+			2645, -- Ghost Wolf
+			7840, -- Swim Speed (Swim Speed Potion)
+			36554, -- Shadowstep
+			54861, -- Nitro Boosts
+			-- 58875, -- Spirit Walk
+			64127, 64129, -- Body and Soul (r1,2)
+			-- 68992, -- Darkflight
+			-- 85499, -- Speed of Light
+			-- 87023, -- Cauterize
+			31641, 31642, -- Blazing Speed (r1,2)
+			33357, -- Dash
+			-- 77761, -- Stampeding Roar
+			-- 111400, -- Burning Rush
+			-- 116841, -- Tiger's Lust
+			-- 118922, -- Posthaste
+			-- 119085, -- Chi Torpedo
+			-- 121557, -- Angelic Feather
+			-- 137452, -- Displacer Beast
+			-- 137573, -- Burst of Speed
+			-- 192082, -- Wind Rush (shaman wind rush totem talent)
+			-- 196674, -- Planewalker (warlock artifact trait)
+			-- 197023, -- Cut to the chase (rogue pvp talent)
+			-- 199407, -- Light on your feet (mistweaver monk artifact trait)
+			-- 201233, -- whirling kicks (windwalaker monk pvp talent)
+			-- 201447, -- Ride the wind (windwalaker monk pvp talent)
+			-- 209754, -- Boarding Party (rogue pvp talent)
+			-- 210980, -- Focus in the light (holy priest artifact trait)
+			-- 213177, -- swift as a coursing river (brewmaster artifact trait)
+			-- 214121, -- Body and Mind (priest talent)
+			-- 215572, -- Frothing Berserker (warrior talent)
+			-- 231390, -- Trailblazer (hunter talent)
+			5118, 13159,  -- Aspect of the Cheetah & Aspect of the Pack
+			-- 204475, -- Windburst (marks hunter artifact ability)        
+		},
+		-- Deff 
+		DeffBuffsMagic = {
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender 
+			64205, -- Divine Sacrifice 
+			53527, -- Divine Guardian
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword 
+			-- 104773, -- Unending Resolve        
+			-- 108271, -- Astral Shift
+			6940, -- Hand of Sacrifice
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+			-- 213915, -- Mass reflect
+			-- 212295, -- Nether Ward (Warlock)
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			-- 122278, -- Dampen Harm 
+			61336, -- Survival Instincts -- Believe this is physical?
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 204018, -- Blessing of Spellwarding
+			-- 196555, -- Netherwalk
+			-- 206803, -- Rain from Above
+		}, 
+		DeffBuffs = {        
+			-- 76577, -- Smoke Bomb
+			-- 53480, -- Road of Sacriface
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender        
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword        
+			-- 104773, -- Unending Resolve
+			6940, -- Hand of Sacrifice
+			-- 108271, -- Astral Shift
+			30823, -- Shamanistic Rage
+			26669, -- Evasion
+			22812, -- Ironbark
+			10278, -- Hand of Protection
+			-- 74001, -- Combat Readiness
+			31224, -- Cloak of Shadows
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			48792, -- Icebound Fortitude
+			49222, -- Bone Shield (DK UH talent)
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			498, -- Divine Protection
+			-- 157913, -- Evanesce
+			-- 115203, -- Fortifying Brew
+			22812, -- Barkskin
+			-- 122278, -- Dampen Harm        
+			61336, -- Survival Instincts
+			22842, -- Frenzied Regeneration
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 198589, -- Blur    
+			-- 196555, -- Netherwalk
+			-- 243435, -- Fortifying Brew
+			-- 206803, -- Rain from Above
+		},    
+		-- Damage buffs / debuffs
+		Rage = {
+			18499, -- Berserker Rage
+			12880, 14201, 14202, 14203, 14204, -- Enrage (Fury talent r1,2,3,4,5)
+			12292, -- Death Wish
+		}, 
+		DamageBuffs = {        
+			51690, -- Killing Spree
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			59672, -- Metamorphosis (demonology)
+			34692, -- The Beast Within 
+			3045, -- Rapid Fire
+			53434, -- Call of the Wild (Hunter pet)
+			1719, -- Recklessness
+			-- 193530, -- Aspect of the Wild (small burst)
+			-- 266779, -- Coordinated Assault
+			-- 193526, -- Trueshot
+			50213, -- Tiger's Fury (small burst)
+			50334, -- Berserk 
+			-- 102560, -- Incarnation: Chosen of Elune
+			-- 102543, -- Incarnation: King of the Jungle
+			11129, -- Combustion 
+			12042, -- Arcane Power                
+			12472, -- Icy Veins
+			12043, -- Presence of Mind (magic)
+			55342, -- Mirror Image
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			16166, -- Elemental Mastery 
+			-- 113858, -- Dark Soul: Instability
+			-- 267217, -- Nether Portal
+			-- 113860, -- Dark Soul: Misery
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+			51271, -- Pillar of Frost
+			85696, -- Zealotry
+			85730, -- Deadly Calm
+			77801, -- Demon Soul
+		},
+		DamageBuffs_Melee = {        
+			51690, -- Killing Spree
+			-- 121471, -- Shadow of Blades
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			1719, -- Recklessness
+			12292, -- Death Wish
+			-- 59672, -- Metamorphosis (demonology)
+			-- 266779, -- Coordinated Assault
+			50334, -- Berserk 
+			102543, -- Incarnation: King of the Jungle
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+			51271, -- Pillar of Frost
+			85696, -- Zealotry
+			85730, -- Deadly Calm		
+		},
+		BurstHaste = {
+			-- 90355, -- Ancient Hysteria
+			-- 146555, -- Drums of Rage
+			-- 178207, -- Drums of Fury
+			-- 230935, -- Drums of the Mountain
+			2825, -- Bloodlust
+			-- 80353, -- Time Warp
+			-- 160452, -- Netherwinds
+			32182, -- Heroism
+		},
+		-- SOME SPECIAL
+		DamageDeBuffs = {
+			-- 79140, -- Vendetta (debuff)
+			-- 115080, -- Touhc of Death (debuff)
+			-- 122470, -- KARMA
+		}, 
+		Flags = {
+			301091, -- Alliance flag
+			301089,  -- Horde flag 
+			34976,  -- Netherstorm Flag
+			-- 121164, -- Orb of Power
+		}, 
+		-- Cast Bars
+		Reshift = {
+			{118, 45}, -- Polymorph (45 coz of blink available)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+			-- {19386, 40}, -- Wyvern Sting
+		},
+		Premonition = {
+			-- {113724, 30}, -- Ring of Frost 
+			{118, 45}, -- Polymorph (45 coz of blink available while cast)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+		},
+		CastBarsCC = {
+			-- 113724, -- Ring of Frost
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			-- 20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting
+			33786, -- Cyclone
+			11446, -- Mind Control   
+		},
+		AllPvPKickCasts = {    
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting -- Instant in wrath
+			33786, -- Cyclone
+			11446, -- Mind Control 
+			982, -- Revive Pet 
+			32375, -- Mass Dispel 
+			-- 203286, -- Greatest Pyroblast
+			59172, -- Chaos Bolt 
+			48477, -- Rebirth
+			-- 203155, -- Sniper Shot 
+			53007, -- Penance
+			48072, -- Prayer of Healing
+			6064, -- Heal
+			48070, -- Flash Heal
+			48120, -- Binding Heal                        (priest, holy)
+			-- 48113, -- Prayer of Mending (Instant in wrath)
+			64843, -- Divine Hymn
+			-- 120517, -- Halo                                (priest, holy/disc)
+			33247, -- Shadow Mend
+			-- 194509, -- Power Word: Radiance
+			-- 265202, -- Holy Word: Salvation                (priest, holy)
+			48063, -- Greater Heal                        (priest, holy)
+			48447, -- Tranquility
+			48443, -- Regrowth
+			-- 53251, -- Wild Growth -- Instant in wrath
+			50464, -- Nourish                             (druid, restoration)
+			55459, -- Chain Heal
+			-- 8004, -- Healing Surge
+			-- 73920, -- Healing Rain
+			49273, -- Healing Wave
+			49276, -- Lesser Healing Wave
+			-- 197995, -- Wellspring                          (shaman, restoration)
+			-- 207778, -- Downpour                            (shaman, restoration)
+			48785, -- Flash of Light
+			48782, -- Holy Light
+			-- 116670, -- Vivify
+			-- 124682, -- Enveloping Mist
+			-- 191837, -- Essence Font
+			-- 209525, -- Soothing Mist
+			-- 227344, -- Surging Mist                        (monk, mistweaver)
+		},    
+	}
+elseif BuildToC >= 40000 then
+	AuraList = {
+		-- CC SCHOOL TYPE 
+		Magic = {
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			11446, -- Mind Control                
+			10955, -- Shackle Undead
+			20066, -- Repentance          
+			60192, -- Freezing Arrow (hunter pvp)        
+			6358, -- Seduction
+			47860, -- Death Coil
+			31661, -- Dragon's Breath
+			15487, -- Silence        
+			48827, -- Avenger's Shield
+			49916, -- Strangulate
+			49203, -- Hungering Cold (DK frost talent)
+			47843, -- Unstable Affliction
+			10308, -- Hammer of Justice
+			64044, -- Psychic Horror
+			47847, -- Shadowfury
+			1122, -- Summon Infernal (Inferno)
+			59672, -- Metamorphosis (Demonology)
+		},
+		MagicRooted = {
+			53313, -- Entangling Roots
+			42917, -- Frost Nova
+			45524, -- Chains of Ice
+		}, 
+		Curse = {
+			51514, -- Hex   
+			11719, -- Curse of Tongues
+			50511, -- Curse of Weakness
+		},
+		Disease = {
+			196782, -- Outbreak (5 sec infecting dot)
+			191587, -- Outbreak (21+ sec dot)
+			48483, 48484, 48485, -- Infected Wounds (Feral slow)
+			59879, -- Blood Plague
+			59921, -- Frost Fever
+		},
+		Poison = {
+			3034, -- Viper Sting
+			3043, -- Scorpid Sting
+		},
+		Physical = {
+			5246, -- Intimidating Shout
+			13741, 13793, -- Improved Gouge
+			2094, -- Blind
+			19503, -- Scatter Shot (hunter pvp talent)
+			1833, -- Cheap Shot
+			8643, -- Kidney Shot
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			19577, -- Intimidation
+			49803, -- Pounce
+			199804, -- Between the Eyes
+			49802, -- Maim
+			47481, -- Gnaw (DK pet)
+			51722, -- Dismantle
+			676, -- Disarm        
+			46968, -- Shockwave
+			20549, -- War Stomp
+		},
+		-- CC CONTROL TYPE
+		CrowdControl = {
+			-- Deprecated
+		},
+		Incapacitated = {
+			-- Druid
+			49802, -- Maim (Feral PvP talent)
+			-- Hunter 
+			19503, -- Scatter Shot 
+			60192, -- Freezing Arrow (hunter pvp)  
+			-- Mage 
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey) 
+			-- Paladin 
+			20066, -- Repentance 
+			-- Priest 
+			10955, -- Shackle Undead
+			-- Rogue 
+			13741, 13793, -- Improved Gouge	
+			-- Shaman		
+			51514, -- Hex (also 211004, 210873, 211015, 211010)   
+			-- Warlock 
+			710, 18647, -- Banish
+		},
+		Disoriented = {
+			-- Death Knight
+			-- Druid 
+			33786, -- Cyclone 
+			-- Hunter
+			-- Mage 
+			31661, -- Dragon's Breath (Fire)
+			-- Paladin 
+			-- Priest
+			-- 226943, -- Mind Bomb
+			-- Rogue 
+			2094, -- Blind		
+			-- Warlock
+			115268, -- Mesmerize (Shivarra)
+			6358, -- Seduction (Succubus)
+			-- Warrior
+			5246, -- Intimidating Shout
+		},    
+		Fear = {
+			5246, -- Intimidating Shout
+		},
+		Charmed = {
+			-- Deprecated
+			11446, -- Mind Control                  
+			10955, -- Shackle Undead
+		},
+		Sleep = {
+		},
+		Stuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			49203, -- Hungering Cold
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Paladin 
+			10308, -- Hammer of Justice
+			-- Priest 
+			64044, -- Psychic Horror
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Warlock 
+			47847, -- Shadowfury
+			-- 89766, -- Axe Toss (pet)
+			1122, -- Summon Infernal (Inferno)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+			-- Kul Tiran
+		},
+		PhysStuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			-- Druid 
+			49802, -- Maim
+			-- 163505, -- Rake
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+		},
+		Silenced = {
+			-- Death Knight 
+			49916, -- Strangulate (Unholy/Blood)
+			-- Hunter 
+			34490, -- Silencing Shot
+			-- Paladin 
+			48827, -- Avenger's Shield	(Prot)	
+			-- Priest 
+			15487, -- Silence (Shadow)    
+			-- Rogue 		
+			1330, -- Garrote - Silence				
+			-- Warlock         
+			31117, -- Unstable Affliction -- Not 100% sure
+		},
+		Disarmed = {
+			-- Rogue 
+			51722, -- Dismantle
+			-- Warrior 
+			676, -- Disarm  
+		}, 
+		Rooted = {
+			53313, -- Entangling Roots Dispel able 
+			64695, -- Earthgrab
+			51485, -- Storm earth and fire
+			42917, -- Frost Nova
+			33395, -- Freeze (frost mage water elemental)
+			45334, -- Immobilized (wild charge, bear form) 
+			12289, 12668, 23695, -- Improved Hamstring (r1,2,3)     
+			19185, 64803, 64804, -- Entrapment (r1&2&3)
+			55509, -- Venom Web Spray (Hunter pet)
+		},  
+		Slowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold
+			42945, -- Blast Wave
+			1715, -- Hamstring
+			3775, -- Crippling Poison
+			3600, -- Earthbind
+			5116, -- Concussive Shot
+			7301, -- Frost Armor
+			48674, -- Deadly Throw
+			45524, -- Chains of Ice
+			50259, -- Dazed (Wild Charge, druid talent, cat form)
+			53227, -- Typhoon
+			12323, -- Piercing Howl
+			71647, -- Ice Trap
+			48156, -- Mind Flay
+			31589, -- Slow
+			48483, 48484, 48485, -- Infected Wounds
+			64186, -- Frostbrand Attack
+			53575, -- Tendon Rip (Hunter pet)
+			2974, -- Wing Clip
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			55741, 68766, -- Desecration (DK unholy talent)
+			50040, 50041, 50043, -- Chilblains (DK frost talent r1,2,3)
+			42931, -- Cone of Cold (frost mage)
+			53407, -- Judgement of Justice
+		},
+		MagicSlowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold       
+			3600, -- Earthbind
+			7301, -- Frost Armor
+			53227, -- Typhoon
+			64186, -- Frostbrand Attack
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			42931, -- Cone of Cold (frost mage)
+		},
+		BreakAble = {
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			20066, -- Repentance
+			51514, -- Hex
+			60192, -- Freezing Arrow
+			6358, -- Seduction
+			2094, -- Blind
+			5246, -- Intimidating Shout
+			13741, 13793, -- Improved Gouge
+			31661, -- Dragon's Breath
+			19503, -- Scatter Shot        
+			-- Rooted CC
+			--53313, -- Entangling Roots
+			--42917, -- Frost Nova
+		},
+		-- Imun Specific Buffs 
+		FearImun = {
+			34692, -- The Beast Within (Hunter BM PvP)
+			49039, -- Lichborne
+			8143, -- Tremor Totem 
+		},
+		StunImun = {
+			48792, -- Icebound Fortitude
+			6615, -- Free Action (Potion)
+			1953, -- Blink (micro buff)
+			46924, -- Bladestorm
+		},        
+		Freedom = {
+			1044, -- Hand of Freedom
+			46924, -- Bladestorm
+			53271, -- Master's Call    
+		},
+		TotalImun = {
+			710, 18647, -- Banish
+			642, -- Divine Shield
+			45438, -- Ice Block
+			20711, -- Spirit of Redemption
+		},
+		DamagePhysImun = {
+			10278, -- Hand of Protection
+			642, -- Bubble
+		},    
+		DamageMagicImun = {    -- When we can't totally damage    
+			31224, -- Cloak of Shadows
+		}, 
+		CCTotalImun = {
+			46924, -- Bladestorm   
+		},     
+		CCMagicImun = {
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+		}, 
+		Reflect = {            -- Only to cancel reflect effect  
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+
+		}, 
+		KickImun = { -- Imun Silence too
+			31821, -- Aura mastery
+		},
+		-- Purje 
+		ImportantPurje = {
+			10278, -- Hand of Protection
+			11129, -- Combustion 
+			10060, -- Power Infusion
+			12042, -- Arcane Power 
+			12472, -- Icy Veins
+			20216, -- Divine Favor 
+		},
+		SecondPurje = {
+			1044, -- Hand of Freedom      
+			-- We need purje druid only in bear form 
+			48451, -- Lifebloom
+			48441, -- Rejuvenation
+			-- 155777, -- Rejuvenation (Germination)
+			53251, -- Wild Growth    
+			48443, -- Regrowth
+			48469, 48470, -- Mark of the Wild & Gift of the Wild
+		},
+		PvEPurje = {
+			197797, 210662, 211632, 209033, 198745, 194615, 282098, 301629, 297133, 266201, 258938, 268709, 268375, 274210, 276265,
+		},
+		-- Speed 
+		Speed = {
+			11305, -- Sprint
+			2379, -- Speed (Swiftness Potion)
+			2645, -- Ghost Wolf
+			7840, -- Swim Speed (Swim Speed Potion)
+			36554, -- Shadowstep
+			54861, -- Nitro Boosts
+			-- 58875, -- Spirit Walk
+			64127, 64129, -- Body and Soul (r1,2)
+			-- 68992, -- Darkflight
+			-- 85499, -- Speed of Light
+			-- 87023, -- Cauterize
+			31641, 31642, -- Blazing Speed (r1,2)
+			33357, -- Dash
+			-- 77761, -- Stampeding Roar
+			-- 111400, -- Burning Rush
+			-- 116841, -- Tiger's Lust
+			-- 118922, -- Posthaste
+			-- 119085, -- Chi Torpedo
+			-- 121557, -- Angelic Feather
+			-- 137452, -- Displacer Beast
+			-- 137573, -- Burst of Speed
+			-- 192082, -- Wind Rush (shaman wind rush totem talent)
+			-- 196674, -- Planewalker (warlock artifact trait)
+			-- 197023, -- Cut to the chase (rogue pvp talent)
+			-- 199407, -- Light on your feet (mistweaver monk artifact trait)
+			-- 201233, -- whirling kicks (windwalaker monk pvp talent)
+			-- 201447, -- Ride the wind (windwalaker monk pvp talent)
+			-- 209754, -- Boarding Party (rogue pvp talent)
+			-- 210980, -- Focus in the light (holy priest artifact trait)
+			-- 213177, -- swift as a coursing river (brewmaster artifact trait)
+			-- 214121, -- Body and Mind (priest talent)
+			-- 215572, -- Frothing Berserker (warrior talent)
+			-- 231390, -- Trailblazer (hunter talent)
+			5118, 13159,  -- Aspect of the Cheetah & Aspect of the Pack
+			-- 204475, -- Windburst (marks hunter artifact ability)        
+		},
+		-- Deff 
+		DeffBuffsMagic = {
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender 
+			64205, -- Divine Sacrifice 
+			53527, -- Divine Guardian
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword 
+			-- 104773, -- Unending Resolve        
+			-- 108271, -- Astral Shift
+			6940, -- Hand of Sacrifice
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+			-- 213915, -- Mass reflect
+			-- 212295, -- Nether Ward (Warlock)
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			-- 122278, -- Dampen Harm 
+			61336, -- Survival Instincts -- Believe this is physical?
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 204018, -- Blessing of Spellwarding
+			-- 196555, -- Netherwalk
+			-- 206803, -- Rain from Above
+		}, 
+		DeffBuffs = {        
+			-- 76577, -- Smoke Bomb
+			-- 53480, -- Road of Sacriface
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender        
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword        
+			-- 104773, -- Unending Resolve
+			6940, -- Hand of Sacrifice
+			-- 108271, -- Astral Shift
+			30823, -- Shamanistic Rage
+			26669, -- Evasion
+			22812, -- Ironbark
+			10278, -- Hand of Protection
+			-- 74001, -- Combat Readiness
+			31224, -- Cloak of Shadows
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			48792, -- Icebound Fortitude
+			49222, -- Bone Shield (DK UH talent)
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			498, -- Divine Protection
+			-- 157913, -- Evanesce
+			-- 115203, -- Fortifying Brew
+			22812, -- Barkskin
+			-- 122278, -- Dampen Harm        
+			61336, -- Survival Instincts
+			22842, -- Frenzied Regeneration
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 198589, -- Blur    
+			-- 196555, -- Netherwalk
+			-- 243435, -- Fortifying Brew
+			-- 206803, -- Rain from Above
+		},    
+		-- Damage buffs / debuffs
+		Rage = {
+			18499, -- Berserker Rage
+			12880, 14201, 14202, 14203, 14204, -- Enrage (Fury talent r1,2,3,4,5)
+			12292, -- Death Wish
+		}, 
+		DamageBuffs = {        
+			51690, -- Killing Spree
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			59672, -- Metamorphosis (demonology)
+			34692, -- The Beast Within 
+			3045, -- Rapid Fire
+			53434, -- Call of the Wild (Hunter pet)
+			1719, -- Recklessness
+			-- 193530, -- Aspect of the Wild (small burst)
+			-- 266779, -- Coordinated Assault
+			-- 193526, -- Trueshot
+			50213, -- Tiger's Fury (small burst)
+			50334, -- Berserk 
+			-- 102560, -- Incarnation: Chosen of Elune
+			-- 102543, -- Incarnation: King of the Jungle
+			11129, -- Combustion 
+			12042, -- Arcane Power                
+			12472, -- Icy Veins
+			12043, -- Presence of Mind (magic)
+			55342, -- Mirror Image
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			16166, -- Elemental Mastery 
+			-- 113858, -- Dark Soul: Instability
+			-- 267217, -- Nether Portal
+			-- 113860, -- Dark Soul: Misery
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+			51271, -- Pillar of Frost
+			85696, -- Zealotry
+			85730, -- Deadly Calm
+			77801, -- Demon Soul
+		},
+		DamageBuffs_Melee = {        
+			51690, -- Killing Spree
+			-- 121471, -- Shadow of Blades
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			1719, -- Recklessness
+			12292, -- Death Wish
+			-- 59672, -- Metamorphosis (demonology)
+			-- 266779, -- Coordinated Assault
+			50334, -- Berserk 
+			102543, -- Incarnation: King of the Jungle
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+			51271, -- Pillar of Frost
+			85696, -- Zealotry
+			85730, -- Deadly Calm		
+		},
+		BurstHaste = {
+			-- 90355, -- Ancient Hysteria
+			-- 146555, -- Drums of Rage
+			-- 178207, -- Drums of Fury
+			-- 230935, -- Drums of the Mountain
+			2825, -- Bloodlust
+			-- 80353, -- Time Warp
+			-- 160452, -- Netherwinds
+			32182, -- Heroism
+		},
+		-- SOME SPECIAL
+		DamageDeBuffs = {
+			-- 79140, -- Vendetta (debuff)
+			-- 115080, -- Touhc of Death (debuff)
+			-- 122470, -- KARMA
+		}, 
+		Flags = {
+			301091, -- Alliance flag
+			301089,  -- Horde flag 
+			34976,  -- Netherstorm Flag
+			-- 121164, -- Orb of Power
+		}, 
+		-- Cast Bars
+		Reshift = {
+			{118, 45}, -- Polymorph (45 coz of blink available)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+			-- {19386, 40}, -- Wyvern Sting
+		},
+		Premonition = {
+			-- {113724, 30}, -- Ring of Frost 
+			{118, 45}, -- Polymorph (45 coz of blink available while cast)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+		},
+		CastBarsCC = {
+			-- 113724, -- Ring of Frost
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			-- 20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting
+			33786, -- Cyclone
+			11446, -- Mind Control   
+		},
+		AllPvPKickCasts = {    
+			28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting -- Instant in wrath
+			33786, -- Cyclone
+			11446, -- Mind Control 
+			982, -- Revive Pet 
+			32375, -- Mass Dispel 
+			-- 203286, -- Greatest Pyroblast
+			59172, -- Chaos Bolt 
+			48477, -- Rebirth
+			-- 203155, -- Sniper Shot 
+			53007, -- Penance
+			48072, -- Prayer of Healing
+			6064, -- Heal
+			48070, -- Flash Heal
+			48120, -- Binding Heal                        (priest, holy)
+			-- 48113, -- Prayer of Mending (Instant in wrath)
+			64843, -- Divine Hymn
+			-- 120517, -- Halo                                (priest, holy/disc)
+			33247, -- Shadow Mend
+			-- 194509, -- Power Word: Radiance
+			-- 265202, -- Holy Word: Salvation                (priest, holy)
+			48063, -- Greater Heal                        (priest, holy)
+			48447, -- Tranquility
+			48443, -- Regrowth
+			-- 53251, -- Wild Growth -- Instant in wrath
+			50464, -- Nourish                             (druid, restoration)
+			55459, -- Chain Heal
+			-- 8004, -- Healing Surge
+			-- 73920, -- Healing Rain
+			49273, -- Healing Wave
+			49276, -- Lesser Healing Wave
+			-- 197995, -- Wellspring                          (shaman, restoration)
+			-- 207778, -- Downpour                            (shaman, restoration)
+			48785, -- Flash of Light
+			48782, -- Holy Light
+			-- 116670, -- Vivify
+			-- 124682, -- Enveloping Mist
+			-- 191837, -- Essence Font
+			-- 209525, -- Soothing Mist
+			-- 227344, -- Surging Mist                        (monk, mistweaver)
+		},    
+	}
+elseif BuildToC >= 30000 then
+	AuraList = {
+		-- CC SCHOOL TYPE 
+		Magic = {
+			12826, 28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			11446, -- Mind Control                
+			10955, -- Shackle Undead
+			18658, -- Hibernate
+			20066, -- Repentance          
+			6215, -- Fear
+			14311, -- Freezing Trap
+			14309, -- Freezing Trap Effect
+			60192, -- Freezing Arrow (hunter pvp)        
+			6358, -- Seduction
+			17928, -- Howl of Terror
+			47860, -- Death Coil
+			10890, -- Psychic Scream
+			31661, -- Dragon's Breath
+			15487, -- Silence        
+			48827, -- Avenger's Shield
+			49916, -- Strangulate
+			49203, -- Hungering Cold (DK frost talent)
+			47843, -- Unstable Affliction
+			10308, -- Hammer of Justice
+			64044, -- Psychic Horror
+			47847, -- Shadowfury
+			1122, -- Summon Infernal (Inferno)
+			59672, -- Metamorphosis (Demonology)
+		},
+		MagicRooted = {
+			53313, -- Entangling Roots
+			42917, -- Frost Nova
+			45524, -- Chains of Ice
+		}, 
+		Curse = {
+			51514, -- Hex   
+			11719, -- Curse of Tongues
+			50511, -- Curse of Weakness
+		},
+		Disease = {
+			196782, -- Outbreak (5 sec infecting dot)
+			191587, -- Outbreak (21+ sec dot)
+			48483, 48484, 48485, -- Infected Wounds (Feral slow)
+			59879, -- Blood Plague
+			59921, -- Frost Fever
+		},
+		Poison = {
+			49012, -- Wyvern Sting
+			3034, -- Viper Sting
+			3043, -- Scorpid Sting
+		},
+		Physical = {
+			51724, -- Sap
+			5246, -- Intimidating Shout
+			38764, -- Gouge
+			13741, 13793, 13792, -- Improved Gouge
+			2094, -- Blind
+			19503, -- Scatter Shot (hunter pvp talent)
+			1833, -- Cheap Shot
+			8643, -- Kidney Shot
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			19577, -- Intimidation
+			49803, -- Pounce
+			199804, -- Between the Eyes
+			49802, -- Maim
+			47481, -- Gnaw (DK pet)
+			51722, -- Dismantle
+			676, -- Disarm        
+			46968, -- Shockwave
+			20549, -- War Stomp
+		},
+		-- CC CONTROL TYPE
+		CrowdControl = {
+			-- Deprecated
+			18658, -- Hibernate
+		},
+		Incapacitated = {
+			-- Druid
+			49802, -- Maim (Feral PvP talent)
+			-- Hunter 
+			19503, -- Scatter Shot 
+			14311, -- Freezing Trap
+			14309, -- Freezing Trap Effect
+			60192, -- Freezing Arrow (hunter pvp)  
+			49012, -- Wyvern Sting
+			-- Mage 
+			12826, 28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey) 
+			-- Paladin 
+			20066, -- Repentance 
+			-- Priest 
+			10955, -- Shackle Undead
+			-- Rogue 
+			51724, -- Sap
+			38764, -- Gouge
+			13741, 13793, 13792, -- Improved Gouge	
+			-- Shaman		
+			51514, -- Hex (also 211004, 210873, 211015, 211010)   
+			-- Warlock 
+			710, 18647, -- Banish
+		},
+		Disoriented = {
+			-- Death Knight
+			-- Druid 
+			33786, -- Cyclone 
+			-- Hunter
+			-- Mage 
+			31661, -- Dragon's Breath (Fire)
+			-- Paladin 
+			-- Priest
+			10890, -- Psychic Scream
+			-- 226943, -- Mind Bomb
+			-- Rogue 
+			2094, -- Blind		
+			-- Warlock
+			6215, -- Fear
+			17928, -- Howl of Terror
+			115268, -- Mesmerize (Shivarra)
+			6358, -- Seduction (Succubus)
+			-- Warrior
+			5246, -- Intimidating Shout
+		},    
+		Fear = {
+			6215, -- Fear
+			17928, -- Howl of Terror
+			5246, -- Intimidating Shout
+			10890, -- Psychic Scream
+		},
+		Charmed = {
+			-- Deprecated
+			11446, -- Mind Control                  
+			10955, -- Shackle Undead
+		},
+		Sleep = {
+			18658, -- Hibernate
+		},
+		Stuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			49203, -- Hungering Cold
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Paladin 
+			10308, -- Hammer of Justice
+			-- Priest 
+			64044, -- Psychic Horror
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Warlock 
+			47847, -- Shadowfury
+			-- 89766, -- Axe Toss (pet)
+			1122, -- Summon Infernal (Inferno)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+			-- Kul Tiran
+		},
+		PhysStuned = {
+			-- Death Knight 
+			47481, -- Gnaw (pet)
+			-- Druid 
+			49802, -- Maim
+			-- 163505, -- Rake
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Hunter 
+			19577, -- Intimidation (pet)
+			-- Rogue 
+			1833, -- Cheap Shot 
+			408, -- Kidney Shot 
+			-- Druid 
+			49802, -- Maim
+			49803, -- Pounce
+			8983, -- Bash
+			16940, 16941, -- Brutal Impact (r1&2)
+			-- Warrior 
+			46968, -- Shockwave 
+			7922, -- Charge Stun
+			-- Tauren
+			20549, -- War Stomp
+		},
+		Silenced = {
+			-- Death Knight 
+			49916, -- Strangulate (Unholy/Blood)
+			-- Hunter 
+			34490, -- Silencing Shot
+			-- Paladin 
+			48827, -- Avenger's Shield	(Prot)	
+			-- Priest 
+			15487, -- Silence (Shadow)    
+			-- Rogue 		
+			1330, -- Garrote - Silence				
+			-- Warlock         
+			31117, -- Unstable Affliction -- Not 100% sure
+		},
+		Disarmed = {
+			-- Rogue 
+			51722, -- Dismantle
+			-- Warrior 
+			676, -- Disarm  
+		}, 
+		Rooted = {
+			53313, -- Entangling Roots Dispel able 
+			64695, -- Earthgrab
+			51485, -- Storm earth and fire
+			42917, -- Frost Nova
+			33395, -- Freeze (frost mage water elemental)
+			45334, -- Immobilized (wild charge, bear form) 
+			12289, 12668, 23695, -- Improved Hamstring (r1,2,3)     
+			19185, 64803, 64804, -- Entrapment (r1&2&3)
+			55509, -- Venom Web Spray (Hunter pet)
+		},  
+		Slowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold
+			42945, -- Blast Wave
+			1715, -- Hamstring
+			3775, -- Crippling Poison
+			3600, -- Earthbind
+			5116, -- Concussive Shot
+			7301, -- Frost Armor
+			48674, -- Deadly Throw
+			45524, -- Chains of Ice
+			50259, -- Dazed (Wild Charge, druid talent, cat form)
+			53227, -- Typhoon
+			12323, -- Piercing Howl
+			71647, -- Ice Trap
+			48156, -- Mind Flay
+			31589, -- Slow
+			48483, 48484, 48485, -- Infected Wounds
+			64186, -- Frostbrand Attack
+			53575, -- Tendon Rip (Hunter pet)
+			2974, -- Wing Clip
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			55741, 68766, -- Desecration (DK unholy talent)
+			50040, 50041, 50043, -- Chilblains (DK frost talent r1,2,3)
+			42931, -- Cone of Cold (frost mage)
+			53407, -- Judgement of Justice
+		},
+		MagicSlowed = {
+			42842, -- Frostbolt
+			42931, -- Cone of Cold       
+			3600, -- Earthbind
+			7301, -- Frost Armor
+			53227, -- Typhoon
+			64186, -- Frostbrand Attack
+			49236, -- Frost Shock
+			16927, -- Chilled (frost mage effect)
+			42931, -- Cone of Cold (frost mage)
+		},
+		BreakAble = {
+			12826, 28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			51724, -- Sap
+			20066, -- Repentance
+			51514, -- Hex
+			18658, -- Hibernate
+			6215, -- Fear
+			14311, -- Freezing Trap
+			14309, -- Freezing Trap Effect
+			60192, -- Freezing Arrow
+			6358, -- Seduction
+			2094, -- Blind
+			49012, -- Wyvern Sting  
+			17928, -- Howl of Terror
+			5246, -- Intimidating Shout
+			10890, -- Psychic Scream
+			38764, -- Gouge
+			13741, 13793, 13792, -- Improved Gouge
+			31661, -- Dragon's Breath
+			19503, -- Scatter Shot        
+			-- Rooted CC
+			--53313, -- Entangling Roots
+			--42917, -- Frost Nova
+		},
+		-- Imun Specific Buffs 
+		FearImun = {
+			34692, -- The Beast Within (Hunter BM PvP)
+			49039, -- Lichborne
+			8143, -- Tremor Totem 
+		},
+		StunImun = {
+			48792, -- Icebound Fortitude
+			6615, -- Free Action (Potion)
+			1953, -- Blink (micro buff)
+			46924, -- Bladestorm
+		},        
+		Freedom = {
+			1044, -- Hand of Freedom
+			46924, -- Bladestorm
+			53271, -- Master's Call    
+		},
+		TotalImun = {
+			710, 18647, -- Banish
+			642, -- Divine Shield
+			45438, -- Ice Block
+			20711, -- Spirit of Redemption
+		},
+		DamagePhysImun = {
+			10278, -- Hand of Protection
+			642, -- Bubble
+		},    
+		DamageMagicImun = {    -- When we can't totally damage    
+			31224, -- Cloak of Shadows
+		}, 
+		CCTotalImun = {
+			46924, -- Bladestorm   
+		},     
+		CCMagicImun = {
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+		}, 
+		Reflect = {            -- Only to cancel reflect effect  
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+
+		}, 
+		KickImun = { -- Imun Silence too
+			31821, -- Aura mastery
+		},
+		-- Purje 
+		ImportantPurje = {
+			10278, -- Hand of Protection
+			11129, -- Combustion 
+			10060, -- Power Infusion
+			12042, -- Arcane Power 
+			12472, -- Icy Veins
+			20216, -- Divine Favor 
+		},
+		SecondPurje = {
+			1044, -- Hand of Freedom      
+			-- We need purje druid only in bear form 
+			48451, -- Lifebloom
+			48441, -- Rejuvenation
+			-- 155777, -- Rejuvenation (Germination)
+			53251, -- Wild Growth    
+			48443, -- Regrowth
+			48469, 48470, -- Mark of the Wild & Gift of the Wild
+		},
+		PvEPurje = {
+			197797, 210662, 211632, 209033, 198745, 194615, 282098, 301629, 297133, 266201, 258938, 268709, 268375, 274210, 276265,
+		},
+		-- Speed 
+		Speed = {
+			11305, -- Sprint
+			2379, -- Speed (Swiftness Potion)
+			2645, -- Ghost Wolf
+			7840, -- Swim Speed (Swim Speed Potion)
+			36554, -- Shadowstep
+			54861, -- Nitro Boosts
+			-- 58875, -- Spirit Walk
+			64127, 64129, -- Body and Soul (r1,2)
+			-- 68992, -- Darkflight
+			-- 85499, -- Speed of Light
+			-- 87023, -- Cauterize
+			31641, 31642, -- Blazing Speed (r1,2)
+			33357, -- Dash
+			-- 77761, -- Stampeding Roar
+			-- 111400, -- Burning Rush
+			-- 116841, -- Tiger's Lust
+			-- 118922, -- Posthaste
+			-- 119085, -- Chi Torpedo
+			-- 121557, -- Angelic Feather
+			-- 137452, -- Displacer Beast
+			-- 137573, -- Burst of Speed
+			-- 192082, -- Wind Rush (shaman wind rush totem talent)
+			-- 196674, -- Planewalker (warlock artifact trait)
+			-- 197023, -- Cut to the chase (rogue pvp talent)
+			-- 199407, -- Light on your feet (mistweaver monk artifact trait)
+			-- 201233, -- whirling kicks (windwalaker monk pvp talent)
+			-- 201447, -- Ride the wind (windwalaker monk pvp talent)
+			-- 209754, -- Boarding Party (rogue pvp talent)
+			-- 210980, -- Focus in the light (holy priest artifact trait)
+			-- 213177, -- swift as a coursing river (brewmaster artifact trait)
+			-- 214121, -- Body and Mind (priest talent)
+			-- 215572, -- Frothing Berserker (warrior talent)
+			-- 231390, -- Trailblazer (hunter talent)
+			5118, 13159,  -- Aspect of the Cheetah & Aspect of the Pack
+			-- 204475, -- Windburst (marks hunter artifact ability)        
+		},
+		-- Deff 
+		DeffBuffsMagic = {
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender 
+			64205, -- Divine Sacrifice 
+			53527, -- Divine Guardian
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword 
+			-- 104773, -- Unending Resolve        
+			-- 108271, -- Astral Shift
+			6940, -- Hand of Sacrifice
+			31224, -- Cloak of Shadows
+			48707, -- Anti-Magic Shell    
+			8178, -- Grounding Totem Effect
+			23920, -- Spell Reflection
+			-- 213915, -- Mass reflect
+			-- 212295, -- Nether Ward (Warlock)
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			-- 122278, -- Dampen Harm 
+			61336, -- Survival Instincts -- Believe this is physical?
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 204018, -- Blessing of Spellwarding
+			-- 196555, -- Netherwalk
+			-- 206803, -- Rain from Above
+		}, 
+		DeffBuffs = {        
+			-- 76577, -- Smoke Bomb
+			-- 53480, -- Road of Sacriface
+			-- 116849, -- Life Cocoon
+			50720, -- Vigilance
+			47788, -- Guardian Spirit
+			-- 31850, -- Ardent Defender        
+			871, -- Shield Wall
+			-- 118038, -- Die by the Sword        
+			-- 104773, -- Unending Resolve
+			6940, -- Hand of Sacrifice
+			-- 108271, -- Astral Shift
+			30823, -- Shamanistic Rage
+			26669, -- Evasion
+			22812, -- Ironbark
+			10278, -- Hand of Protection
+			-- 74001, -- Combat Readiness
+			31224, -- Cloak of Shadows
+			33206, -- Pain Suppression
+			47585, -- Dispersion
+			-- 186265, -- Aspect of Turtle
+			48792, -- Icebound Fortitude
+			49222, -- Bone Shield (DK UH talent)
+			-- 115176, -- Zen Meditation
+			-- 122783, -- Diffuse Magic
+			-- 86659, -- Guardian of Ancient Kings
+			642, -- Divine Shield
+			45438, -- Ice Block
+			498, -- Divine Protection
+			-- 157913, -- Evanesce
+			-- 115203, -- Fortifying Brew
+			22812, -- Barkskin
+			-- 122278, -- Dampen Harm        
+			61336, -- Survival Instincts
+			22842, -- Frenzied Regeneration
+			45182, -- Cheating Death
+			31230, -- Cheat Death
+			-- 198589, -- Blur    
+			-- 196555, -- Netherwalk
+			-- 243435, -- Fortifying Brew
+			-- 206803, -- Rain from Above
+		},    
+		-- Damage buffs / debuffs
+		Rage = {
+			18499, -- Berserker Rage
+			12880, 14201, 14202, 14203, 14204, -- Enrage (Fury talent r1,2,3,4,5)
+			12292, -- Death Wish
+		}, 
+		DamageBuffs = {        
+			51690, -- Killing Spree
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			59672, -- Metamorphosis (demonology)
+			34692, -- The Beast Within 
+			3045, -- Rapid Fire
+			53434, -- Call of the Wild (Hunter pet)
+			1719, -- Recklessness
+			-- 193530, -- Aspect of the Wild (small burst)
+			-- 266779, -- Coordinated Assault
+			-- 193526, -- Trueshot
+			50213, -- Tiger's Fury (small burst)
+			50334, -- Berserk 
+			-- 102560, -- Incarnation: Chosen of Elune
+			-- 102543, -- Incarnation: King of the Jungle
+			11129, -- Combustion 
+			12042, -- Arcane Power                
+			12472, -- Icy Veins
+			12043, -- Presence of Mind (magic)
+			55342, -- Mirror Image
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			16166, -- Elemental Mastery 
+			-- 113858, -- Dark Soul: Instability
+			-- 267217, -- Nether Portal
+			-- 113860, -- Dark Soul: Misery
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+		},
+		DamageBuffs_Melee = {        
+			51690, -- Killing Spree
+			-- 121471, -- Shadow of Blades
+			51713, -- Shadow Dance
+			13750, -- Adrenaline Rush
+			1719, -- Recklessness
+			12292, -- Death Wish
+			-- 59672, -- Metamorphosis (demonology)
+			-- 266779, -- Coordinated Assault
+			50334, -- Berserk 
+			102543, -- Incarnation: King of the Jungle
+			-- 51271, -- Pillar of Frost
+			49016, -- Unholy Frenzy 
+			31884, -- Avenging Wrath
+			-- 236321, -- Warbanner
+			-- 107574, -- Avatar        
+			-- 114050, -- Ascendance
+			-- 137639, -- Storm, Earth, and Fire
+			-- 152173, -- Serenity
+		},
+		BurstHaste = {
+			-- 90355, -- Ancient Hysteria
+			-- 146555, -- Drums of Rage
+			-- 178207, -- Drums of Fury
+			-- 230935, -- Drums of the Mountain
+			2825, -- Bloodlust
+			-- 80353, -- Time Warp
+			-- 160452, -- Netherwinds
+			32182, -- Heroism
+		},
+		-- SOME SPECIAL
+		DamageDeBuffs = {
+			-- 79140, -- Vendetta (debuff)
+			-- 115080, -- Touhc of Death (debuff)
+			-- 122470, -- KARMA
+		}, 
+		Flags = {
+			301091, -- Alliance flag
+			301089,  -- Horde flag 
+			34976,  -- Netherstorm Flag
+			-- 121164, -- Orb of Power
+		}, 
+		-- Cast Bars
+		Reshift = {
+			{118, 45}, -- Polymorph (45 coz of blink available)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+			-- {19386, 40}, -- Wyvern Sting
+		},
+		Premonition = {
+			-- {113724, 30}, -- Ring of Frost 
+			{118, 45}, -- Polymorph (45 coz of blink available while cast)
+			{20066, 30}, -- Repentance 
+			{51514, 30}, -- Hex 
+			{49012, 40}, -- Wyvern Sting
+			{6215, 30}, -- Fear 
+		},
+		CastBarsCC = {
+			-- 113724, -- Ring of Frost
+			12826, 28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			-- 20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting
+			6215, -- Fear
+			33786, -- Cyclone
+			11446, -- Mind Control   
+		},
+		AllPvPKickCasts = {    
+			12826, 28271, 28272, 61305, 61721, 61780, -- Polymorph (regular, turtle, pig, black cat, rabbit, turkey)
+			20066, -- Repentance
+			51514, -- Hex
+			-- 19386, -- Wyvern Sting -- Instant in wrath
+			6215, -- Fear
+			33786, -- Cyclone
+			11446, -- Mind Control 
+			982, -- Revive Pet 
+			32375, -- Mass Dispel 
+			-- 203286, -- Greatest Pyroblast
+			59172, -- Chaos Bolt 
+			48477, -- Rebirth
+			-- 203155, -- Sniper Shot 
+			53007, -- Penance
+			48072, -- Prayer of Healing
+			6064, -- Heal
+			48070, -- Flash Heal
+			48120, -- Binding Heal                        (priest, holy)
+			-- 48113, -- Prayer of Mending (Instant in wrath)
+			64843, -- Divine Hymn
+			-- 120517, -- Halo                                (priest, holy/disc)
+			33247, -- Shadow Mend
+			-- 194509, -- Power Word: Radiance
+			-- 265202, -- Holy Word: Salvation                (priest, holy)
+			48063, -- Greater Heal                        (priest, holy)
+			48447, -- Tranquility
+			48443, -- Regrowth
+			-- 53251, -- Wild Growth -- Instant in wrath
+			50464, -- Nourish                             (druid, restoration)
+			55459, -- Chain Heal
+			-- 8004, -- Healing Surge
+			-- 73920, -- Healing Rain
+			49273, -- Healing Wave
+			49276, -- Lesser Healing Wave
+			-- 197995, -- Wellspring                          (shaman, restoration)
+			-- 207778, -- Downpour                            (shaman, restoration)
+			48785, -- Flash of Light
+			48782, -- Holy Light
+			-- 116670, -- Vivify
+			-- 124682, -- Enveloping Mist
+			-- 191837, -- Essence Font
+			-- 209525, -- Soothing Mist
+			-- 227344, -- Surging Mist                        (monk, mistweaver)
+		},    
+	}
+elseif BuildToC >= 20000 then
+	AuraList = {
+		-- CC SCHOOL TYPE 
+		Magic = {         
+			853, 				-- Hammer of Justice 		(Paladin)
+			20066, 				-- Repentance				(Paladin)
+			17390,				-- Faerie Fire (Feral)		(Druid)		
+			2637, 				-- Hibernate 				(Druid)
+			1499, 				-- Freezing Trap			(Hunter)
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			605, 				-- Mind Control 			(Priest)                 
+			8122, 				-- Psychic Scream			(Priest)
+			9484, 				-- Shackle Undead 			(Priest)  				
+			15487, 				-- Silence 					(Priest)
+			5782, 				-- Fear						(Warlock)        
+			6358, 				-- Seduction 				(Warlock)
+			5484, 				-- Howl of Terror        	(Warlock)        
+			710, 				-- Banish 					(Warlock)
+			-- Roots 
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)		
+			339, 				-- Entangling Roots 		(Druid)		
+		},
+		MagicRooted = {
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)		
+			339, 				-- Entangling Roots 		(Druid)
+		}, 
+		Curse = {
+			8277, 				-- Voodoo Hex   			(Shaman) 				-- I AM NOT SURE
+		},
+		--Disease = {},
+		Poison = {
+			24133, 				-- Wyvern Sting 			(Hunter)
+			3034, 				-- Viper Sting 				(Hunter)
+			3043,		 		-- Scorpid Sting 			(Hunter)
+			7992, 				-- Slowing Poison 			(Rogue)
+			3408, 				-- Crippling Poison 		(Rogue)
+		},
+		Physical = {
+			7922, 				-- Charge Stun				(Warrior)
+			676, 				-- Disarm 					(Warrior)
+			5246, 				-- Intimidating Shout		(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)
+			12355,				-- Impact					(Mage, physical effect)
+			19503, 				-- Scatter Shot 			(Hunter)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			408, 				-- Kidney Shot 				(Rogue)	
+			1833, 				-- Cheap Shot 				(Rogue)        
+			1776, 				-- Gouge					(Rogue)		
+			6770, 				-- Sap 						(Rogue)
+			2094, 				-- Blind					(Rogue)		        
+			20549, 				-- War Stomp 				(Tauren)	
+			20685,				-- Storm Bolt 				(Unknown)				-- FIX ME: Is it useable?
+			5530,				-- Mace Stun				(Unknown)
+			16922,				-- Starfire Stun			(Unknown)
+	   },
+		-- CC CONTROL TYPE
+		Incapacitated = { 
+			1499, 				-- Freezing Trap			(Hunter) 
+			20066, 				-- Repentance				(Paladin)
+			6770, 				-- Sap 						(Rogue)
+			1776, 				-- Gouge					(Rogue)
+			710, 				-- Banish        			(Warlock)
+			22570,				-- Mangle					(Druid)
+		},
+		Fleeing	= {
+			5782, 				-- Fear						(Warlock)
+			5484, 				-- Howl of Terror   		(Warlock)
+			5246, 				-- Intimidating Shout		(Warrior)
+			8122, 				-- Psychic Scream			(Priest)
+		},
+		Shackled = {
+			9484, 				-- Shackle Undead 			(Priest)	
+		},
+		Polymorphed	= {
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28272,				-- Polymorph: Pig			(Mage)
+			28271,				-- Polymorph: Turtle		(Mage)
+		},
+		Disoriented = {			
+			19503, 				-- Scatter Shot 			(Hunter)		 
+			2094, 				-- Blind					(Rogue)
+		},    
+		Fear = {
+			5782, 				-- Fear						(Warlock)
+			5484, 				-- Howl of Terror   		(Warlock)
+			5246, 				-- Intimidating Shout		(Warrior)
+			6789,				-- Death Coil				(Warlock)
+			8122, 				-- Psychic Scream			(Priest)
+		},
+		Charmed = {
+			605, 				-- Mind Control 			(Priest)                 
+			--9484, 				-- Shackle Undead 			(Priest)
+		},
+		Sleep = {
+			2637, 				-- Hibernate 				(Druid)	
+			19386, 				-- Wyvern Sting 			(Hunter)
+		},
+		Stuned = {
+			7922, 				-- Charge Stun				(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5530,				-- Mace Stun Effect			(Warrior)
+			12798,				-- Revenge Stun				(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)
+			12355,				-- Impact					(Mage, physical effect)
+			22703,				-- Inferno Effect			(Warlock)
+			18093,				-- Pyroclasm				(Warlock)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			853, 				-- Hammer of Justice 		(Paladin)
+			1833, 				-- Cheap Shot 				(Rogue)
+			408, 				-- Kidney Shot 				(Rogue)	
+			20549, 				-- War Stomp 				(Tauren)
+			20685,				-- Storm Bolt 				(Unknown)				-- FIX ME: Is it useable?			
+			16922,				-- Starfire Stun			(Unknown)
+			56,					-- Stun 					(Weapon proc)
+			4067,				-- Big Bronze Bomb
+			4066,				-- Small Bronze Bomb
+			4065,				-- Large Copper Bomb
+			4064,				-- Rough Copper Bomb
+			13808,				-- M73 Frag Grenade
+			19769,				-- Thorium Grenade
+		},
+		PhysStuned = {
+			7922, 				-- Charge Stun				(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5530,				-- Mace Stun Effect			(Warrior)
+			12798,				-- Revenge Stun				(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)		
+			12355,				-- Impact					(Mage, physical effect)
+			22703,				-- Inferno Effect			(Warlock)
+			18093,				-- Pyroclasm				(Warlock)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			1833, 				-- Cheap Shot 				(Rogue)
+			408, 				-- Kidney Shot 				(Rogue)		
+			20549, 				-- War Stomp 				(Tauren)	
+			20685,				-- Storm Bolt	 			(Unknown)				-- FIX ME: Is it useable?		
+			16922,				-- Starfire Stun			(Unknown)		
+			56,					-- Stun 					(Weapon proc)	
+			4067,				-- Big Bronze Bomb
+			4066,				-- Small Bronze Bomb
+			4065,				-- Large Copper Bomb
+			4064,				-- Rough Copper Bomb
+		},
+		Silenced = {
+			15487, 				-- Silence 					(Priest) 
+			18469,				-- Counterspell - Silenced	(Mage)
+			18425,				-- Kick - Silenced			(Rogue)
+			24259,				-- Spell Lock (Felhunter) 	(Warlock)
+			19821,				-- Arcane Bomb
+			18278,				-- Silence (Silent Fang sword)
+		},
+		Disarmed = {
+			676, 				-- Disarm 					(Warrior)
+			14251,				-- Riposte					(Rogue)
+			23365,				-- Dropped Weapon			(Unknown)
+		},
+		Rooted = {
+			23694,				-- Improved Hamstring		(Warrior)
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)	
+			12494,				-- Frostbite				(Mage)	
+			339, 				-- Entangling Roots 		(Druid)
+			19675,				-- Feral Charge Effect		(Druid)
+			19229,				-- Improved Wing Clip 		(Hunter)
+			19185,				-- Entrapment				(Hunter)
+			25999,				-- Boar Charge				(Hunter's pet)		
+		},  
+		Slowed = {		
+			1715, 				-- Hamstring				(Warrior)
+			12323, 				-- Piercing Howl			(Warrior)
+			3408, 				-- Crippling Poison			(Rogue)        
+			7992, 				-- Slowing Poison			(Rogue)
+			2974, 				-- Wing Clip				(Hunter)
+			5116, 				-- Concussive Shot			(Hunter)
+			13496, 				-- Dazed (aka "confuse")	(Druid, Hunter)        
+			17311, 				-- Mind Flay				(Priest)                               
+			2484, 				-- Earthbind				(Shaman)
+			8056, 				-- Frost Shock				(Shaman)
+			8034, 				-- Frostbrand Attack		(Shaman)
+			116, 				-- Frostbolt     			(Mage)
+			120, 				-- Cone of Cold				(Mage)
+			6136, 				-- Chilled 					(Mage)		
+			16094, 				-- Frost Breath 			(Mage)        
+			11113, 				-- Blast Wave				(Mage)
+			3604, 				-- Tendon Rip				(Unknown)
+		},
+		MagicSlowed = {        
+			2484, 				-- Earthbind				(Shaman)
+			8056, 				-- Frost Shock				(Shaman)
+			8034, 				-- Frostbrand Attack		(Shaman)				-- FIX ME: I AM NOT SURE 		
+			6136, 				-- Chilled 					(Mage)	 				-- FIX ME: I AM NOT SURE 
+			16094, 				-- Frost Breath 			(Mage)					-- FIX ME: I AM NOT SURE 
+			120, 				-- Cone of Cold 			(Mage)
+			116, 				-- Frostbolt     			(Mage)
+		},
+		BreakAble = {
+			5246, 				-- Intimidating Shout		(Warrior)
+			20066, 				-- Repentance				(Paladin)		
+			2637, 				-- Hibernate				(Druid)
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28272,				-- Polymorph: Pig			(Mage)
+			28271,				-- Polymorph: Turtle		(Mage)
+			1499, 				-- Freezing Trap			(Hunter)
+			19386, 				-- Wyvern Sting   			(Hunter)	
+			19503, 				-- Scatter Shot        		(Hunter)
+			6770, 				-- Sap 						(Rogue)
+			2094, 				-- Blind					(Rogue) 
+			1776, 				-- Gouge					(Rogue)
+			5782, 				-- Fear						(Warlock)        
+			6358, 				-- Seduction (pet)			(Warlock)                
+			5484, 				-- Howl of Terror			(Warlock)
+			8122, 				-- Psychic Scream			(Priest)      
+			9484, 				-- Shackle Undead 			(Priest)			
+			-- Rooted CC
+			339, 				-- Entangling Roots			(Druid)
+			122, 				-- Frost Nova				(Mage)
+		},
+		-- Imun Specific Buffs 
+		FearImun = {
+			18499, 				-- Berserker Rage 			(Warrior)
+			12328,				-- Death Wish				(Warrior)
+			1719,				-- Recklessness				(Warrior)
+			8143, 				-- Tremor Totem 			(Shaman)
+			6346,				-- Fear Ward				(Priest)		
+		},
+		FearImunDeBuffs = {
+			704,				-- Curse of Recklessness 	(Warlock)
+		},
+		StunImun = {
+			6615, 				-- Free Action 				(Free Action Potion)
+			24364,				-- Living Free Action		(Potion)
+			1953, 				-- Blink (micro buff)		(Mage)
+		},        
+		Freedom = {
+			6615, 				-- Free Action 				(Free Action Potion)
+			1044, 				-- Blessing of Freedom		(Paladin)
+			24364,				-- Living Free Action		(Potion)
+		},
+		TotalImun = {
+			710, 				-- Banish 					(Warlock)
+			498, 				-- Divine Protection		(Paladin)
+			642, 				-- Divine Shield			(Paladin)		
+			11958, 				-- Ice Block				(Mage)
+			19263, 				-- Deterrence    			(Hunter)
+			20711, 				-- Spirit of Redemption		(Priest)
+			17624,				-- Petrification			(Flask of Petrification)
+		},
+		DamagePhysImun = {		
+			1022, 				-- Blessing of Protection	(Paladin)
+			3169,				-- Invulnerability			(Limited Invulnerability Potion)
+			--16621,			-- Self Invulnerability (Invulnerable Mail weapon) -- FIX ME: seems only for swing attacks
+		},
+		DamageMagicImun = {}, 
+		CCTotalImun = {},     
+		CCMagicImun = {
+			8178,				-- Grounding Totem Effect	(Shaman)
+		},
+		Reflect = { 
+			8178, 				-- Grounding Totem Effect	(Shaman)
+			23131, 				-- Frost Reflector			(Item)
+			23132, 				-- Shadow Reflector			(Item)
+			23097, 				-- Fire Reflector			(Item)
+		}, 
+		KickImun = {},
+		-- Purje 
+		ImportantPurje = {
+			1022, 				-- Blessing of Protection	(Paladin)
+			20216, 				-- Divine Favor 			(Paladin)		
+			11129, 				-- Combustion 				(Mage)
+			12042, 				-- Arcane Power 			(Mage)
+			10060, 				-- Power Infusion			(Priest)
+			29166,				-- Innervate				(Druid)
+			2645, 				-- Ghost Wolf 				(Shaman)
+			16166, 				-- Elemental Mastery		(Shaman)
+			17730,				-- Major Spellstone			(Warlock)
+			17729,				-- Greater Spellstone		(Warlock)
+			128,				-- Spellstone				(Warlock)
+			18708,				-- Fel Domination			(Warlock)
+			18288,				-- Amplify Curse			(Warlock)		
+		},
+		SecondPurje = {
+			1044, 				-- Blessing of Freedom      (Paladin)  
+			-- We need purje druid only in bear form 
+			467,				-- Thorns					(Druid)
+			774, 				-- Rejuvenation				(Druid)
+			8936, 				-- Regrowth 				(Druid)
+			1126, 				-- Mark of the Wild			(Druid)
+		},
+		-- Speed 
+		Speed = {
+			2983, 				-- Sprint 					(Rogue)
+			2379, 				-- Speed 					(Swiftness Potion)
+			2645, 				-- Ghost Wolf 				(Shaman)
+			1850, 				-- Dash 					(Druid)
+			5118, 				-- Aspect of the Cheetah	(Hunter)       
+		},
+		-- Deff 
+		DeffBuffsMagic = {
+			8178, 				-- Grounding Totem Effect	(Shaman)
+			--498, 					-- Divine Protection		(Paladin)
+			--642, 					-- Divine Shield			(Paladin)
+			--11958, 				-- Ice Block				(Mage)
+			--19263, 				-- Deterrence    			(Hunter)
+			--20711, 				-- Spirit of Redemption		(Priest)		
+		}, 
+		DeffBuffs = {        
+			871,				-- ShieldWall				(Warrior)
+			20230,				-- Retaliation				(Warrior)
+			5277, 				-- Evasion					(Rogue)
+			1022, 				-- Blessing of Protection	(Paladin)
+			22812,				-- Barkskin					(Druid)
+			3169,				-- Invulnerability			(Limited Invulnerability Potion)
+			--498, 					-- Divine Protection		(Paladin)
+			--642, 					-- Divine Shield			(Paladin)
+			--11958, 				-- Ice Block				(Mage)
+			--19263, 				-- Deterrence    			(Hunter)
+			--20711, 				-- Spirit of Redemption		(Priest)		
+		},  
+		SmallDeffBuffs = {
+			20594,				-- Stoneform				(Dwarf)
+			6940, 				-- Blessing of Sacrifice	(Paladin)
+		},
+		-- Damage buffs / debuffs
+		Rage = {
+			18499, 				-- Berserker Rage (Warrior)
+			12880, 				-- Enrage (Warrior)
+		}, 
+		DamageBuffs = {        
+			12328,				-- Death Wish 				(Warrior)		
+			1719,				-- Recklessness				(Warrior)
+			13877,				-- Blade Flurry				(Rogue)
+			13750,				-- Adrenaline Rush			(Rogue)
+			19574,				-- Bestial Wrath			(Hunter)
+			11129, 				-- Combustion 				(Mage)
+			12042, 				-- Arcane Power 			(Mage)
+			26297,				-- Berserking				(Troll)
+			20572,				-- Blood Fury				(Orc)
+		},
+		DamageBuffs_Melee = {        
+			12328,				-- Death Wish 				(Warrior)	
+			1719,				-- Recklessness				(Warrior)
+			13750,				-- Adrenaline Rush			(Rogue)
+			13877,				-- Blade Flurry				(Rogue)		
+		},
+		BurstHaste = {
+			19372, 				-- Ancient Hysteria 		(Unknown)
+			24185, 				-- Bloodlust 				(Unknown)
+		},
+		-- SOME SPECIAL
+		--DamageDeBuffs = {}, 
+		Flags = {
+			301091, 			-- Alliance flag
+			301089,  			-- Horde flag 
+			23333,				-- Warsong Flag
+			23335,  			-- Silverwing Flag
+		}, 
+		-- Cast Bars
+		Reshift = {
+			{118, 30}, 			-- Polymorph 				(Mage)
+			{19386, 35, 8},		-- Wyvern Sting (8 - 35)	(Hunter)
+		},
+		Premonition = {
+			{118, 30}, 			-- Polymorph 				(Mage)
+			{851, 20},			-- Polymorph: Sheep 		(Mage)
+			{28272, 30},		-- Polymorph: Pig	 		(Mage)
+			{28271, 30},		-- Polymorph: Turtle 		(Mage)
+			{24133, 35, 8},		-- Wyvern Sting (8 - 35)	(Hunter)
+			{5782, 20}, 		-- Fear 					(Warlock)        
+		},
+		CastBarsCC = {
+			118, 				-- Polymorph 				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			20066, 				-- Repentance 				(Paladin)
+			24133, 				-- Wyvern Sting 			(Hunter)
+			5782, 				-- Fear 					(Warlock) 
+			5484, 				-- Howl of Terror   		(Warlock)
+			605, 				-- Mind Control 			(Priest)                 
+			9484, 				-- Shackle Undead 			(Priest) 
+		},
+		AllPvPKickCasts = {    
+			118, 				-- Polymorph 				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			635,				-- Holy Light				(Paladin)
+			19750,				-- Flash of Light			(Paladin)
+			20066, 				-- Repentance 				(Paladin)		
+			5782, 				-- Fear 					(Warlock) 
+			19386, 				-- Wyvern Sting 			(Hunter)       
+			982, 				-- Revive Pet 				(Hunter)
+			605, 				-- Mind Control 			(Priest)  
+			9484, 				-- Shackle Undead 			(Priest) 
+			4526, 				-- Mass Dispel 				(Priest)	
+			596, 				-- Prayer of Healing		(Priest)
+			2060,				-- Greater Heal				(Priest)
+			2061,				-- Flash Heal				(Priest)
+			740, 				-- Tranquility				(Druid)
+			20484, 				-- Rebirth					(Druid)
+			25297,				-- Healing Touch			(Druid)
+			8936, 				-- Regrowth 				(Druid)
+			331,				-- Healing Wave				(Shaman)
+			1064,				-- Chain Heal				(Shaman)
+		},    
+	}
+else
+	AuraList = {
+		-- CC SCHOOL TYPE 
+		Magic = {         
+			853, 				-- Hammer of Justice 		(Paladin)
+			20066, 				-- Repentance				(Paladin)
+			17390,				-- Faerie Fire (Feral)		(Druid)		
+			2637, 				-- Hibernate 				(Druid)
+			1499, 				-- Freezing Trap			(Hunter)
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28270,				-- Polymorph: Cow			(Mage)
+			605, 				-- Mind Control 			(Priest)                 
+			8122, 				-- Psychic Scream			(Priest)
+			9484, 				-- Shackle Undead 			(Priest)  				
+			15487, 				-- Silence 					(Priest)
+			5782, 				-- Fear						(Warlock)        
+			6358, 				-- Seduction 				(Warlock)
+			5484, 				-- Howl of Terror        	(Warlock)        
+			710, 				-- Banish 					(Warlock)
+			-- Roots 
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)		
+			339, 				-- Entangling Roots 		(Druid)		
+		},
+		MagicRooted = {
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)		
+			339, 				-- Entangling Roots 		(Druid)
+		}, 
+		Curse = {
+			8277, 				-- Voodoo Hex   			(Shaman) 				-- I AM NOT SURE
+		},
+		--Disease = {},
+		Poison = {
+			24133, 				-- Wyvern Sting 			(Hunter)
+			3034, 				-- Viper Sting 				(Hunter)
+			3043,		 		-- Scorpid Sting 			(Hunter)
+			7992, 				-- Slowing Poison 			(Rogue)
+			3408, 				-- Crippling Poison 		(Rogue)
+		},
+		Physical = {
+			7922, 				-- Charge Stun				(Warrior)
+			676, 				-- Disarm 					(Warrior)
+			5246, 				-- Intimidating Shout		(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)
+			12355,				-- Impact					(Mage, physical effect)
+			19503, 				-- Scatter Shot 			(Hunter)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			408, 				-- Kidney Shot 				(Rogue)	
+			1833, 				-- Cheap Shot 				(Rogue)        
+			1776, 				-- Gouge					(Rogue)		
+			6770, 				-- Sap 						(Rogue)
+			2094, 				-- Blind					(Rogue)		        
+			20549, 				-- War Stomp 				(Tauren)	
+			20685,				-- Storm Bolt 				(Unknown)				-- FIX ME: Is it useable?
+			5530,				-- Mace Stun				(Unknown)
+			16922,				-- Starfire Stun			(Unknown)
+	   },
+		-- CC CONTROL TYPE
+		Incapacitated = { 
+			1499, 				-- Freezing Trap			(Hunter) 
+			20066, 				-- Repentance				(Paladin)
+			6770, 				-- Sap 						(Rogue)
+			1776, 				-- Gouge					(Rogue)
+			710, 				-- Banish        			(Warlock)
+			22570,				-- Mangle					(Druid)
+		},
+		Fleeing	= {
+			5782, 				-- Fear						(Warlock)
+			5484, 				-- Howl of Terror   		(Warlock)
+			5246, 				-- Intimidating Shout		(Warrior)
+			8122, 				-- Psychic Scream			(Priest)
+		},
+		Shackled = {
+			9484, 				-- Shackle Undead 			(Priest)	
+		},
+		Polymorphed	= {
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28270,				-- Polymorph: Cow			(Mage)
+			28272,				-- Polymorph: Pig			(Mage)
+			28271,				-- Polymorph: Turtle		(Mage)
+		},
+		Disoriented = {			
+			19503, 				-- Scatter Shot 			(Hunter)		 
+			2094, 				-- Blind					(Rogue)
+		},    
+		Fear = {
+			5782, 				-- Fear						(Warlock)
+			5484, 				-- Howl of Terror   		(Warlock)
+			5246, 				-- Intimidating Shout		(Warrior)
+			6789,				-- Death Coil				(Warlock)
+			8122, 				-- Psychic Scream			(Priest)
+		},
+		Charmed = {
+			605, 				-- Mind Control 			(Priest)                 
+			--9484, 				-- Shackle Undead 			(Priest)
+		},
+		Sleep = {
+			2637, 				-- Hibernate 				(Druid)	
+			19386, 				-- Wyvern Sting 			(Hunter)
+		},
+		Stuned = {
+			7922, 				-- Charge Stun				(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5530,				-- Mace Stun Effect			(Warrior)
+			12798,				-- Revenge Stun				(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)
+			12355,				-- Impact					(Mage, physical effect)
+			22703,				-- Inferno Effect			(Warlock)
+			18093,				-- Pyroclasm				(Warlock)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			853, 				-- Hammer of Justice 		(Paladin)
+			1833, 				-- Cheap Shot 				(Rogue)
+			408, 				-- Kidney Shot 				(Rogue)	
+			20549, 				-- War Stomp 				(Tauren)
+			20685,				-- Storm Bolt 				(Unknown)				-- FIX ME: Is it useable?			
+			16922,				-- Starfire Stun			(Unknown)
+			56,					-- Stun 					(Weapon proc)
+			4067,				-- Big Bronze Bomb
+			4066,				-- Small Bronze Bomb
+			4065,				-- Large Copper Bomb
+			4064,				-- Rough Copper Bomb
+			13808,				-- M73 Frag Grenade
+			19769,				-- Thorium Grenade
+		},
+		PhysStuned = {
+			7922, 				-- Charge Stun				(Warrior)
+			12809,				-- Concussion Blow			(Warrior)
+			20253,				-- Intercept Stun 			(Warrior)
+			5530,				-- Mace Stun Effect			(Warrior)
+			12798,				-- Revenge Stun				(Warrior)
+			5211,				-- Bash						(Druid)
+			9005,				-- Pounce					(Druid)		
+			12355,				-- Impact					(Mage, physical effect)
+			22703,				-- Inferno Effect			(Warlock)
+			18093,				-- Pyroclasm				(Warlock)
+			19577,				-- Intimidation 			(Hunter)  				-- Berserker Rage can remove it!
+			19410,				-- Improved Concussive Shot	(Hunter)
+			1833, 				-- Cheap Shot 				(Rogue)
+			408, 				-- Kidney Shot 				(Rogue)		
+			20549, 				-- War Stomp 				(Tauren)	
+			20685,				-- Storm Bolt	 			(Unknown)				-- FIX ME: Is it useable?		
+			16922,				-- Starfire Stun			(Unknown)		
+			56,					-- Stun 					(Weapon proc)	
+			4067,				-- Big Bronze Bomb
+			4066,				-- Small Bronze Bomb
+			4065,				-- Large Copper Bomb
+			4064,				-- Rough Copper Bomb
+		},
+		Silenced = {
+			15487, 				-- Silence 					(Priest) 
+			18469,				-- Counterspell - Silenced	(Mage)
+			18425,				-- Kick - Silenced			(Rogue)
+			24259,				-- Spell Lock (Felhunter) 	(Warlock)
+			19821,				-- Arcane Bomb
+			18278,				-- Silence (Silent Fang sword)
+		},
+		Disarmed = {
+			676, 				-- Disarm 					(Warrior)
+			14251,				-- Riposte					(Rogue)
+			23365,				-- Dropped Weapon			(Unknown)
+		},
+		Rooted = {
+			23694,				-- Improved Hamstring		(Warrior)
+			22519, 				-- Ice Nova 				(Mage)
+			122, 				-- Frost Nova 				(Mage)	
+			12494,				-- Frostbite				(Mage)	
+			339, 				-- Entangling Roots 		(Druid)
+			19675,				-- Feral Charge Effect		(Druid)
+			19229,				-- Improved Wing Clip 		(Hunter)
+			19185,				-- Entrapment				(Hunter)
+			25999,				-- Boar Charge				(Hunter's pet)		
+		},  
+		Slowed = {		
+			1715, 				-- Hamstring				(Warrior)
+			12323, 				-- Piercing Howl			(Warrior)
+			3408, 				-- Crippling Poison			(Rogue)        
+			7992, 				-- Slowing Poison			(Rogue)
+			2974, 				-- Wing Clip				(Hunter)
+			5116, 				-- Concussive Shot			(Hunter)
+			13496, 				-- Dazed (aka "confuse")	(Druid, Hunter)        
+			17311, 				-- Mind Flay				(Priest)                               
+			2484, 				-- Earthbind				(Shaman)
+			8056, 				-- Frost Shock				(Shaman)
+			8034, 				-- Frostbrand Attack		(Shaman)
+			116, 				-- Frostbolt     			(Mage)
+			120, 				-- Cone of Cold				(Mage)
+			6136, 				-- Chilled 					(Mage)		
+			16094, 				-- Frost Breath 			(Mage)        
+			11113, 				-- Blast Wave				(Mage)
+			3604, 				-- Tendon Rip				(Unknown)
+		},
+		MagicSlowed = {        
+			2484, 				-- Earthbind				(Shaman)
+			8056, 				-- Frost Shock				(Shaman)
+			8034, 				-- Frostbrand Attack		(Shaman)				-- FIX ME: I AM NOT SURE 		
+			6136, 				-- Chilled 					(Mage)	 				-- FIX ME: I AM NOT SURE 
+			16094, 				-- Frost Breath 			(Mage)					-- FIX ME: I AM NOT SURE 
+			120, 				-- Cone of Cold 			(Mage)
+			116, 				-- Frostbolt     			(Mage)
+		},
+		BreakAble = {
+			5246, 				-- Intimidating Shout		(Warrior)
+			20066, 				-- Repentance				(Paladin)		
+			2637, 				-- Hibernate				(Druid)
+			118, 				-- Polymorph				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28270,				-- Polymorph: Cow			(Mage)
+			28272,				-- Polymorph: Pig			(Mage)
+			28271,				-- Polymorph: Turtle		(Mage)
+			1499, 				-- Freezing Trap			(Hunter)
+			19386, 				-- Wyvern Sting   			(Hunter)	
+			19503, 				-- Scatter Shot        		(Hunter)
+			6770, 				-- Sap 						(Rogue)
+			11297, 				-- Sap 						(Rogue)
+			2094, 				-- Blind					(Rogue) 
+			1776, 				-- Gouge					(Rogue)
+			5782, 				-- Fear						(Warlock)        
+			6215, 				-- Fear						(Warlock)        
+			6358, 				-- Seduction (pet)			(Warlock)                
+			5484, 				-- Howl of Terror			(Warlock)
+			8122, 				-- Psychic Scream			(Priest)      
+			9484, 				-- Shackle Undead 			(Priest)			
+			22641, 				-- Reckless Charge			(Item)			
+			700, 				-- Sleep					(Mage)			
+			1090, 				-- Sleep					(Mage)			
+			-- Rooted CC
+			--339, 				-- Entangling Roots			(Druid)
+			--122, 				-- Frost Nova				(Mage)
+		},
+		-- Imun Specific Buffs 
+		FearImun = {
+			18499, 				-- Berserker Rage 			(Warrior)
+			12328,				-- Death Wish				(Warrior)
+			1719,				-- Recklessness				(Warrior)
+			8143, 				-- Tremor Totem 			(Shaman)
+			6346,				-- Fear Ward				(Priest)		
+		},
+		FearImunDeBuffs = {
+			704,				-- Curse of Recklessness 	(Warlock)
+		},
+		StunImun = {
+			6615, 				-- Free Action 				(Free Action Potion)
+			24364,				-- Living Free Action		(Potion)
+			1953, 				-- Blink (micro buff)		(Mage)
+		},        
+		Freedom = {
+			6615, 				-- Free Action 				(Free Action Potion)
+			1044, 				-- Blessing of Freedom		(Paladin)
+			24364,				-- Living Free Action		(Potion)
+			9774,				-- Immune Root
+			425294,				-- Dispersion				(Priest)
+		},
+		TotalImun = {
+			710, 				-- Banish 					(Warlock)
+			498, 				-- Divine Protection		(Paladin)
+			642, 				-- Divine Shield			(Paladin)		
+			1020, 				-- Divine Shield			(Paladin)		
+			11958, 				-- Ice Block				(Mage)
+			20711, 				-- Spirit of Redemption		(Priest)
+			17624,				-- Petrification			(Flask of Petrification)
+			6724,				-- Light of Elune
+		},
+		DamagePhysImun = {		
+			1022, 				-- Blessing of Protection	(Paladin)
+			10278, 				-- Blessing of Protection	(Paladin)
+			3169,				-- Invulnerability			(Limited Invulnerability Potion)
+			3387,				-- Limited Invulnerability Potion
+			--16621,			-- Self Invulnerability (Invulnerable Mail weapon) -- FIX ME: seems only for swing attacks
+			6724,				-- Light of Elune
+			370391,				-- Failsafe Phylactery
+		},
+		DamageMagicImun = {
+			6724,				-- Light of Elune
+			370391,				-- Failsafe Phylactery
+		}, 
+		CCTotalImun = {},     
+		CCMagicImun = {
+			8178,				-- Grounding Totem Effect	(Shaman)
+		},
+		Reflect = { 
+			8178, 				-- Grounding Totem Effect	(Shaman)
+			23131, 				-- Frost Reflector			(Item)
+			23132, 				-- Shadow Reflector			(Item)
+			23097, 				-- Fire Reflector			(Item)
+		}, 
+		KickImun = {},
+		-- Purje 
+		ImportantPurje = {
+			1022, 				-- Blessing of Protection	(Paladin)
+			10278, 				-- Blessing of Protection	(Paladin)
+			20216, 				-- Divine Favor 			(Paladin)		
+			11129, 				-- Combustion 				(Mage)
+			12042, 				-- Arcane Power 			(Mage)
+			10060, 				-- Power Infusion			(Priest)
+			29166,				-- Innervate				(Druid)
+			2645, 				-- Ghost Wolf 				(Shaman)
+			16166, 				-- Elemental Mastery		(Shaman)
+			17730,				-- Major Spellstone			(Warlock)
+			17729,				-- Greater Spellstone		(Warlock)
+			128,				-- Spellstone				(Warlock)
+			18708,				-- Fel Domination			(Warlock)
+			18288,				-- Amplify Curse			(Warlock)		
+		},
+		SecondPurje = {
+			1044, 				-- Blessing of Freedom      (Paladin)  
+			-- We need purje druid only in bear form 
+			467,				-- Thorns					(Druid)
+			774, 				-- Rejuvenation				(Druid)
+			8936, 				-- Regrowth 				(Druid)
+			1126, 				-- Mark of the Wild			(Druid)
+		},
+		-- Speed 
+		Speed = {
+			2983, 				-- Sprint 					(Rogue)
+			2379, 				-- Speed 					(Swiftness Potion)
+			2645, 				-- Ghost Wolf 				(Shaman)
+			1850, 				-- Dash 					(Druid)
+			5118, 				-- Aspect of the Cheetah	(Hunter)       
+		},
+		-- Deff 
+		DeffBuffsMagic = {
+			8178, 				-- Grounding Totem Effect	(Shaman)
+			--498, 					-- Divine Protection		(Paladin)
+			--642, 					-- Divine Shield			(Paladin)
+			--11958, 				-- Ice Block				(Mage)
+			--19263, 				-- Deterrence    			(Hunter)
+			--20711, 				-- Spirit of Redemption		(Priest)		
+		}, 
+		DeffBuffs = {        
+			871,				-- ShieldWall				(Warrior)
+			20230,				-- Retaliation				(Warrior)
+			5277, 				-- Evasion					(Rogue)
+			1022, 				-- Blessing of Protection	(Paladin)
+			10278, 				-- Blessing of Protection	(Paladin)
+			22812,				-- Barkskin					(Druid)
+			3169,				-- Invulnerability			(Limited Invulnerability Potion)
+			3387,				-- Limited Invulnerability Potion
+			--498, 					-- Divine Protection		(Paladin)
+			--642, 					-- Divine Shield			(Paladin)
+			--11958, 				-- Ice Block				(Mage)
+			19263, 				-- Deterrence    			(Hunter)
+			--20711, 				-- Spirit of Redemption		(Priest)		
+		},  
+		SmallDeffBuffs = {
+			20594,				-- Stoneform				(Dwarf)
+			6940, 				-- Blessing of Sacrifice	(Paladin)
+		},
+		-- Damage buffs / debuffs
+		Rage = {
+			18499, 				-- Berserker Rage (Warrior)
+			12880, 				-- Enrage (Warrior)
+		}, 
+		DamageBuffs = {        
+			12328,				-- Death Wish 				(Warrior)		
+			1719,				-- Recklessness				(Warrior)
+			13877,				-- Blade Flurry				(Rogue)
+			13750,				-- Adrenaline Rush			(Rogue)
+			19574,				-- Bestial Wrath			(Hunter)
+			11129, 				-- Combustion 				(Mage)
+			12042, 				-- Arcane Power 			(Mage)
+			26297,				-- Berserking				(Troll)
+			20572,				-- Blood Fury				(Orc)
+			20007,				-- Holy Strength
+		},
+		DamageBuffs_Melee = {        
+			12328,				-- Death Wish 				(Warrior)	
+			1719,				-- Recklessness				(Warrior)
+			13750,				-- Adrenaline Rush			(Rogue)
+			13877,				-- Blade Flurry				(Rogue)		
+			20007,				-- Holy Strength
+		},
+		BurstHaste = {
+			19372, 				-- Ancient Hysteria 		(Unknown)
+			24185, 				-- Bloodlust 				(Unknown)
+		},
+		-- SOME SPECIAL
+		--DamageDeBuffs = {}, 
+		Flags = {
+			301091, 			-- Alliance flag
+			301089,  			-- Horde flag 
+			23333,				-- Warsong Flag
+			23335,  			-- Silverwing Flag
+		}, 
+		-- Cast Bars
+		Reshift = {
+			{118, 30}, 			-- Polymorph 				(Mage)
+			{19386, 35, 8},		-- Wyvern Sting (8 - 35)	(Hunter)
+		},
+		Premonition = {
+			{118, 30}, 			-- Polymorph 				(Mage)
+			{851, 20},			-- Polymorph: Sheep 		(Mage)
+			{28270, 30},		-- Polymorph: Cow	 		(Mage)
+			{28272, 30},		-- Polymorph: Pig	 		(Mage)
+			{28271, 30},		-- Polymorph: Turtle 		(Mage)
+			{24133, 35, 8},		-- Wyvern Sting (8 - 35)	(Hunter)
+			{5782, 20}, 		-- Fear 					(Warlock)        
+		},
+		CastBarsCC = {
+			118, 				-- Polymorph 				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28270,				-- Polymorph: Cow			(Mage)
+			20066, 				-- Repentance 				(Paladin)
+			24133, 				-- Wyvern Sting 			(Hunter)
+			5782, 				-- Fear 					(Warlock) 
+			5484, 				-- Howl of Terror   		(Warlock)
+			605, 				-- Mind Control 			(Priest)                 
+			9484, 				-- Shackle Undead 			(Priest) 
+		},
+		AllPvPKickCasts = {    
+			118, 				-- Polymorph 				(Mage)
+			851,				-- Polymorph: Sheep 		(Mage)
+			28270,				-- Polymorph: Cow			(Mage)
+			635,				-- Holy Light				(Paladin)
+			19750,				-- Flash of Light			(Paladin)
+			20066, 				-- Repentance 				(Paladin)		
+			5782, 				-- Fear 					(Warlock) 
+			19386, 				-- Wyvern Sting 			(Hunter)       
+			982, 				-- Revive Pet 				(Hunter)
+			605, 				-- Mind Control 			(Priest)  
+			9484, 				-- Shackle Undead 			(Priest) 
+			4526, 				-- Mass Dispel 				(Priest)	
+			596, 				-- Prayer of Healing		(Priest)
+			2060,				-- Greater Heal				(Priest)
+			2061,				-- Flash Heal				(Priest)
+			740, 				-- Tranquility				(Druid)
+			20484, 				-- Rebirth					(Druid)
+			25297,				-- Healing Touch			(Druid)
+			8936, 				-- Regrowth 				(Druid)
+			331,				-- Healing Wave				(Shaman)
+			1064,				-- Chain Heal				(Shaman)
+		},    
+	}
+end
 
 local AssociativeTables = setmetatable({ NullTable = {} }, { -- Only for Auras!
 	--__mode = "kv",
@@ -3262,10 +5352,10 @@ A.Unit = PseudoClass({
 		-- Nill-able: DR_Tick, if its nil function returns true whenever non-imun drCat is apply able
 		local unitID 						= self.UnitID 
 		if not A.IsInPvP then 
-			return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (drDiminishing or 0))
+			return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (drCat ~= "fear" or (AuraList.FearImunDeBuffs and self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0))
 		else 
-			return not drCat or self(unitID):GetDR(drCat) > (drDiminishing or 0)
-		end 		
+			return (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (drCat ~= "fear" or (AuraList.FearImunDeBuffs and self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0))
+		end 
 	end, "UnitID"),
 	-- CreatureType: Bool extenstion
 	IsUndead								= Cache:Pass(function(self)
@@ -3316,32 +5406,53 @@ A.Unit = PseudoClass({
 			end 
 		end 
 	end, "UnitID"),
-	ThreatSituation							= Cache:Pass(function(self, otherunit)  
-		-- @return number 
-		-- Returns: status (0 -> 3), percent of threat, value or threat 		
+	ThreatSituation							= Cache:Pass(function(self, otherunitID)  
+		-- @return number[, number, number]
+		-- Returns: status (0 -> 3)[, percent of threat, value or threat]
+		-- Note: latest two returns only works for Classic - TBC if ThreatLib loaded
 		-- Nill-able: otherunit
 		local unitID 						= self.UnitID
-		return UnitThreatSituation(unitID, otherunit or "target") or 0	       
+		if ThreatLib then 
+			local GUID 						= unitID and UnitGUID(unitID)			
+					
+			if GUID and TeamCachethreatData[GUID] then 
+				if otherunitID and not UnitIsUnit(otherunitID, TeamCachethreatData[GUID].unit) then 
+					-- By specified otherunitID
+					-- Note: I prefer avoid use this as much as it possible since less performance 
+					local _, status, scaledPercent, _, threatValue = UnitDetailedThreatSituation(unitID, otherunitID) -- Lib modified to return by last argument unitGUID!
+					if threatValue and threatValue < 0 then
+						threatValue = threatValue + 410065408
+					end					
+					return status or 0, scaledPercent or 0, threatValue or 0
+				else 
+					-- By own unit's target 
+					return TeamCachethreatData[GUID].status, TeamCachethreatData[GUID].scaledPercent, TeamCachethreatData[GUID].threatValue       
+				end 
+			end 
+			
+			return 0, 0, 0
+		end 
+		
+		local _, status, scaledPercent, _, threatValue = UnitDetailedThreatSituation(unitID, otherunitID or "target")
+		return UnitThreatSituation(unitID) or 0, scaledPercent or 0, threatValue or 0
 	end, "UnitID"),
-	IsTanking 								= Cache:Pass(function(self, otherunit, range)  
+	IsTanking 								= Cache:Pass(function(self, otherunitID, range)  
 		-- @return boolean 
 		-- Nill-able: otherunit, range
-		local unitID 						= self.UnitID
-		local ThreatThreshold 				= 3			
-		local ThreatSituation 				= self(unitID):ThreatSituation(otherunit or "target")
-		return ((A.IsInPvP and UnitIsUnit(unitID, (otherunit or "target") .. "target")) or (not A.IsInPvP and ThreatSituation >= ThreatThreshold)) or self(unitID):IsTankingAoE(range)	       
+		local unitID 						= self.UnitID	
+		local ThreatSituation 				= self(unitID):ThreatSituation(otherunitID) -- cacheed defaultly own target but if need to check something additional here is otherunitID
+		return (A.IsInPvP and UnitIsUnit(unitID, (otherunitID or "target") .. "target")) or (not A.IsInPvP and ThreatSituation >= 3) or self(unitID):IsTankingAoE(range)	       
 	end, "UnitID"),
 	IsTankingAoE 							= Cache:Pass(function(self, range) 
 		-- @return boolean 
 		-- Nill-able: range
 		local unitID 						= self.UnitID
-		local ThreatThreshold 				= 3
 		for unit in pairs(ActiveUnitPlates) do
 			local ThreatSituation 			= self(unitID):ThreatSituation(unit)
-			if ((A.IsInPvP and UnitIsUnit(unitID, unit .. "target")) or (not A.IsInPvP and ThreatSituation >= ThreatThreshold)) and (not range or self(unit .. "target"):CanInterract(range)) then 
+			if ((A.IsInPvP and UnitIsUnit(unitID, unit .. "target")) or (not A.IsInPvP and ThreatSituation >= 3)) and (not range or self(unit .. "target"):CanInterract(range)) then 
 				return true  
 			end
-		end       		
+		end       
 	end, "UnitID"),
 	IsPenalty								= Cache:Pass(function(self)  
 		-- @return boolean 
@@ -3372,10 +5483,7 @@ A.Unit = PseudoClass({
 		-- Returns the total amount of healing the unit can absorb without gaining health
 		-- Abilities like Necrotic Strike cause affected units to absorb healing without gaining health
 		local unitID 						= self.UnitID
-		if BuildToC < 50500 then
-			return 0
-		end
-		return UnitGetTotalHealAbsorbs(unitID) or 0
+		return UnitGetTotalHealAbsorbs and UnitGetTotalHealAbsorbs(unitID) or 0
 	end, "UnitID"),
 	GetTotalHealAbsorbsPercent				= Cache:Pass(function(self)
 		-- @return number
@@ -3593,11 +5701,44 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID
 		return UnitHasIncomingResurrection(unitID)
 	end, "UnitID"),
-	GetIncomingHeals						= Cache:Pass(function(self)
+	GetIncomingHeals						= Cache:Pass(function(self, castTime, unitGUID)
 		-- @return number 
+		-- Nill-able: unitGUID
 		local unitID 						= self.UnitID
-		return UnitGetIncomingHeals(unitID) or 0
-	end, "UnitID"),
+		if not HealComm then
+			return UnitGetIncomingHeals(unitID) or 0
+		end
+		
+		if not castTime or castTime <= 0 then 
+			return 0
+		end 
+				
+		local GUID 							= unitGUID or UnitGUID(unitID)		
+		if not GUID then 
+			return 0 
+		end 
+		
+		return (HealComm:GetOthersHealAmount(GUID, ALL_HEALS, TMW.time + castTime) or 0) * HealComm:GetHealModifier(GUID) -- Better by others since if we will include our heals it will funky use accidentally downrank
+	end, "UnitGUID"),
+	GetIncomingHealsIncSelf					= Cache:Wrap(function(self, castTime, unitGUID)
+		-- @return number 
+		-- Nill-able: unitGUID
+		local unitID 						= self.UnitID
+		if not HealComm then
+			return UnitGetIncomingHeals(unitID) or 0
+		end		
+		
+		if not castTime or castTime <= 0 then 
+			return 0
+		end 
+		
+		local GUID 							= unitGUID or UnitGUID(unitID)
+		if not GUID then 
+			return 0 
+		end 
+		
+		return (HealComm:GetHealAmount(GUID, ALL_HEALS, TMW.time + castTime) or 0) * HealComm:GetHealModifier(GUID) -- Includes self incoming on a unitID 
+	end, "UnitGUID"),
 	GetRange 								= Cache:Wrap(function(self)
 		-- @return number (max), number (min)
 		local unitID 						= self.UnitID
@@ -3619,7 +5760,7 @@ A.Unit = PseudoClass({
 	CanInterract							= Cache:Pass(function(self, range, orBooleanInRange) 
 		-- @return boolean  
 		local unitID 						= self.UnitID
-		local min_range 					= self(unitID):GetRange() 
+		local min_range 					= self(unitID):GetRange()
 		
 		return min_range and min_range > 0 and ((range and min_range <= range) or orBooleanInRange)	
 	end, "UnitID"),
@@ -3911,21 +6052,20 @@ A.Unit = PseudoClass({
 		for i = 1, huge do			
 			spellName, _, spellCount, _, spellDuration, spellExpirationTime, _,_,_, spellID = UnitAura(unitID, i, filter)
 			
-			
 			if type(spellName) == "table" then 		
 				spellCount = spellName.charges
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
 				spellID = spellName.spellId
 				spellName = spellName.name
-			end  			
+			end  
 			
 			if not spellName then 
 				break
 			elseif auraTable[spellID] then 
-				return auraTable[spellID], spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return auraTable[spellID], (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			elseif auraTable[spellName] then 
-				return auraTable[spellName], spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return auraTable[spellName], (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			end 
 		end 
 		
@@ -3950,8 +6090,8 @@ A.Unit = PseudoClass({
 		local _, spellName, spellID, spellCount, spellDuration, spellExpirationTime	
 		for i = 1, huge do			
 			spellName, _, spellCount, _, spellDuration, spellExpirationTime, _,_,_, spellID = UnitAura(unitID, i, filter)
-						
-			if type(spellName) == "table" then 		
+			
+			if type(spellName) == "table" then 
 				spellCount = spellName.charges
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
@@ -3962,7 +6102,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break
 			elseif spellName == auraName then 
-				return spellID, spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return spellID, (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			end 
 		end 
 		
@@ -4012,7 +6152,7 @@ A.Unit = PseudoClass({
 		for i = 1, huge do 
 			spellName, _, _, _, spellDuration, spellExpirationTime, _, _, _, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 	
+			if type(spellName) == "table" then 
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
 				spellID = spellName.spellId
@@ -4022,7 +6162,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break 			
 			elseif AssociativeTables[spell][byID and spellID or spellName] then 
-				local current_dur = spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time
+				local current_dur = (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time -- Classic only, don't touch
 				if current_dur > remain_dur then 
 					c = c + 1
 					remain_dur = current_dur
@@ -4052,7 +6192,7 @@ A.Unit = PseudoClass({
 		for i = 1, huge do 
 			spellName, _, spellCount, _, _, _, _, _, _, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 		
+			if type(spellName) == "table" then 
 				spellCount = spellName.charges
 				spellID = spellName.spellId
 				spellName = spellName.name
@@ -4085,7 +6225,7 @@ A.Unit = PseudoClass({
 		for i = 1, huge do 
 			spellName, _, _, _, spellDuration, spellExpirationTime, _, _, _, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 	
+			if type(spellName) == "table" then 
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
 				spellID = spellName.spellId
@@ -4095,7 +6235,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break 			
 			elseif AssociativeTables[spell][byID and spellID or spellName] then 
-				duration = spellExpirationTime == 0 and 1 or ((spellExpirationTime - TMW.time) / spellDuration)
+				duration = (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and 1 or ((spellExpirationTime - TMW.time) / spellDuration) -- Classic only, don't touch
 				if duration <= 0.3 then 
 					return true 
 				end 
@@ -4115,7 +6255,7 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID		
 		local filter
 		if caster then 
-			filter = "HELPFUL"
+			filter = "HELPFUL PLAYER"
 		else 
 			filter = "HELPFUL"
 		end 
@@ -4124,7 +6264,7 @@ A.Unit = PseudoClass({
 		for i = 1, huge do			
 			spellName, _, spellCount, _, spellDuration, spellExpirationTime, _,_,_, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 		
+			if type(spellName) == "table" then 
 				spellCount = spellName.charges
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
@@ -4135,9 +6275,9 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break 
 			elseif auraTable[spellID] then 
-				return auraTable[spellID], spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return auraTable[spellID], (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			elseif auraTable[spellName] then 
-				return auraTable[spellName], spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return auraTable[spellName], (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			end 
 		end 
 		
@@ -4151,7 +6291,7 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID		
 		local filter
 		if caster then 
-			filter = "HELPFUL"
+			filter = "HELPFUL PLAYER"
 		else 
 			filter = "HELPFUL"
 		end 
@@ -4160,7 +6300,7 @@ A.Unit = PseudoClass({
 		for i = 1, huge do			
 			spellName, _, spellCount, _, spellDuration, spellExpirationTime, _,_,_, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 		
+			if type(spellName) == "table" then 
 				spellCount = spellName.charges
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
@@ -4171,7 +6311,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break
 			elseif spellName == auraName then 
-				return spellID, spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration, spellCount
+				return spellID, (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration, spellCount -- Classic only, don't touch
 			end 
 		end 
 		
@@ -4184,14 +6324,14 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID	
 		local filter						= "HELPFUL"
 		if caster then 
-			filter = "HELPFUL"
+			filter = "HELPFUL PLAYER"
 		end 
 
 		local _, spellName, spellID, spellDuration, spellExpirationTime		
 		for i = 1, huge do 
 			spellName, _, _, _, spellDuration, spellExpirationTime, _, _, _, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 		
+			if type(spellName) == "table" then 
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
 				spellID = spellName.spellId
@@ -4201,7 +6341,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break  
 			elseif AssociativeTables[spell][byID and spellID or spellName] then 
-				return spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time, spellDuration
+				return (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time, spellDuration -- Classic only, don't touch
 			end 
 		end 
 		
@@ -4214,15 +6354,15 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID	
 		local filter 						= "HELPFUL"
 		if caster then 
-			filter = "HELPFUL"
+			filter = "HELPFUL PLAYER"
 		end 
 		local remain_dur, total_dur 		= 0, 0
 		
 		local _, spellName, spellID, spellDuration, spellExpirationTime		
 		for i = 1, huge do 
 			spellName, _, _, _, spellDuration, spellExpirationTime, _, _, _, spellID = UnitAura(unitID, i, filter)
-
-			if type(spellName) == "table" then 	
+			
+			if type(spellName) == "table" then 
 				spellDuration = spellName.duration
 				spellExpirationTime = spellName.expirationTime
 				spellID = spellName.spellId
@@ -4232,7 +6372,7 @@ A.Unit = PseudoClass({
 			if not spellName then 
 				break 			
 			elseif AssociativeTables[spell][byID and spellID or spellName] then 
-				local current_dur = spellExpirationTime == 0 and huge or spellExpirationTime - TMW.time
+				local current_dur = (spellExpirationTime == 0 or max(spellExpirationTime - TMW.time, 0) <= 0) and huge or spellExpirationTime - TMW.time -- Classic only, don't touch
 				if current_dur > remain_dur then 
 					remain_dur, total_dur = current_dur, spellDuration
 					if remain_dur == huge then 
@@ -4250,14 +6390,14 @@ A.Unit = PseudoClass({
 		local unitID 						= self.UnitID	
 		local filter 						= "HELPFUL"
 		if caster then 
-			filter = "HELPFUL"
+			filter = "HELPFUL PLAYER"
 		end 
 		
 		local _, spellName, spellID, spellCount		
 		for i = 1, huge do 
 			spellName, _, spellCount, _, _, _, _, _, _, spellID = UnitAura(unitID, i, filter)
 			
-			if type(spellName) == "table" then 		
+			if type(spellName) == "table" then 
 				spellCount = spellName.charges
 				spellID = spellName.spellId
 				spellName = spellName.name

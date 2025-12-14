@@ -11,7 +11,7 @@ local math_floor				= math.floor
 local math_max					= math.max
 local strbyte					= _G.strbyte
 local strchar					= _G.strchar
-local message					= _G.message
+local message					= _G.message or _G.SetBasicMessageDialogText
 local wipe						= _G.wipe
 local hooksecurefunc			= _G.hooksecurefunc
 
@@ -33,11 +33,6 @@ local CreateFrame 				= _G.CreateFrame
 local UnitGUID 					= _G.UnitGUID
 	  
 local CACHE_DEFAULT_TIMER		= CONST.CACHE_DEFAULT_TIMER	  
-
-if type(message) ~= "function" then 
-	_G.message 	= print 
-	message		= print 
-end 
 
 -------------------------------------------------------------------------------
 -- Listener

@@ -3,6 +3,8 @@ local _G, math														= _G, math
 local TMW 															= _G.TMW
 local huge															= math.huge
 local dir															= [[Interface\AddOns\]] .. ADDON_NAME .. [[\Media\]]
+local isRetail														= _G.WOW_PROJECT_ID == _G.WOW_PROJECT_MAINLINE
+
 -- TellMeWhen
 _G.ACTION_CONST_TMW_DEFAULT_STATE_HIDE 								= TMW.CONST.STATE.DEFAULT_HIDE
 _G.ACTION_CONST_TMW_DEFAULT_STATE_SHOW 								= TMW.CONST.STATE.DEFAULT_SHOW
@@ -11,52 +13,57 @@ _G.ACTION_CONST_ADDON_NAME_TMW										= "TellMeWhen"
 
 -- Action 
 _G.ACTION_CONST_ADDON_NAME											= ADDON_NAME
-_G.ACTION_CONST_CACHE_DISABLE				 						= false 		-- On own risk, it will disable memorize cache but will reduce a lot of memory drive, it's trade-in toggle between CPU and Memory 	(required reload after change)
-_G.ACTION_CONST_CACHE_MEM_DRIVE										= false			-- On own risk, it will unlock remain cache for low CPU demand functions "aka memory killer" 										(doesn't work if _G.ACTION_CONST_CACHE_DISABLE is 'true')
-_G.ACTION_CONST_CACHE_DEFAULT_TIMER 								= 0.01			-- "Tools.lua" offset on cache control 
-_G.ACTION_CONST_CACHE_DEFAULT_TIMER_UNIT							= 0.005			-- "Unit.lua" offset on cache control 
+_G.ACTION_CONST_EXPANSION											= _G.LE_EXPANSION_LEVEL_CURRENT + 1 -- 1: Classic, 2: TBC, and so on..
+_G.ACTION_CONST_CACHE_DISABLE				 						= false -- On own risk, it will disable memorize cache but will reduce a lot of memory drive, it's trade-in toggle between CPU and Memory 	(required reload after change)
+_G.ACTION_CONST_CACHE_MEM_DRIVE										= false -- On own risk, it will unlock remain cache for low CPU demand functions "aka memory killer" 										(doesn't work if _G.ACTION_CONST_CACHE_DISABLE is 'true')
+_G.ACTION_CONST_CACHE_DEFAULT_TIMER 								= 0.01  -- "Tools.lua" offset on cache control 
+_G.ACTION_CONST_CACHE_DEFAULT_TIMER_UNIT							= 0.005 -- "Unit.lua" offset on cache control 
 _G.ACTION_CONST_CACHE_DEFAULT_TIMER_MULTIUNIT_CLEU					= 0.004
-_G.ACTION_CONST_CACHE_DEFAULT_NAMEPLATE_MAX_DISTANCE				= 41			-- Live: 60, Classic: 20б TBC: 41
-_G.ACTION_CONST_CACHE_DEFAULT_NAMEPLATE_MAX_DISTANCE_VALIDANCE		= 41 			-- "4e1"
-_G.ACTION_CONST_CACHE_DEFAULT_OFFSET_DUEL							= 2.9			-- Delay until duel starts after event trigger
+_G.ACTION_CONST_CACHE_DEFAULT_NAMEPLATE_MAX_DISTANCE				= _G.ACTION_CONST_EXPANSION == 1 and 20 or _G.ACTION_CONST_EXPANSION == 2 and 41 or 60
+_G.ACTION_CONST_CACHE_DEFAULT_NAMEPLATE_MAX_DISTANCE_VALIDANCE		= _G.ACTION_CONST_CACHE_DEFAULT_NAMEPLATE_MAX_DISTANCE -- "4e1"
+_G.ACTION_CONST_CACHE_DEFAULT_OFFSET_DUEL							= 2.9   -- Delay until duel starts after event trigger
 
 -- Textures
-_G.ACTION_CONST_PAUSECHECKS_DISABLED 								= dir .. [[LEVELUPICON-LFD]]
-_G.ACTION_CONST_PAUSECHECKS_DEAD_OR_GHOST 							= dir .. [[Achievement_BG_Xkills_AVgraveyard]]
-_G.ACTION_CONST_PAUSECHECKS_IS_MOUNTED 								= dir .. [[Garrison_Building_Stables]]
+_G.ACTION_CONST_PAUSECHECKS_DISABLED 								= not isRetail and dir .. [[LEVELUPICON-LFD]] or 397907
+_G.ACTION_CONST_PAUSECHECKS_DEAD_OR_GHOST 							= not isRetail and dir .. [[Achievement_BG_Xkills_AVgraveyard]] or 236399
+_G.ACTION_CONST_PAUSECHECKS_IS_MOUNTED 								= not isRetail and dir .. [[Garrison_Building_Stables]] or 975744
 _G.ACTION_CONST_PAUSECHECKS_WAITING 								= 134376
-_G.ACTION_CONST_PAUSECHECKS_SPELL_IS_TARGETING 						= dir .. [[Achievement_BG_grab_cap_flagunderXseconds]]
-_G.ACTION_CONST_PAUSECHECKS_LOOTFRAME 								= dir .. [[Garrison_Building_TradingPost]]
+_G.ACTION_CONST_PAUSECHECKS_SPELL_IS_TARGETING 						= not isRetail and dir .. [[Achievement_BG_grab_cap_flagunderXseconds]] or 236353
+_G.ACTION_CONST_PAUSECHECKS_LOOTFRAME 								= not isRetail and dir .. [[Garrison_Building_TradingPost]] or 975746
 _G.ACTION_CONST_PAUSECHECKS_IS_EAT_OR_DRINK 						= 134062
 
-_G.ACTION_CONST_TRINKET1 											= dir .. [[Garrison_BlueWeapon]]
-_G.ACTION_CONST_TRINKET2 											= dir .. [[Garrison_GreenWeapon]]
-_G.ACTION_CONST_POTION 												= dir .. [[Trade_Alchemy_DPotion_A28]]
+_G.ACTION_CONST_TRINKET1 											= not isRetail and dir .. [[Garrison_BlueWeapon]] or 1030902
+_G.ACTION_CONST_TRINKET2 											= not isRetail and dir .. [[Garrison_GreenWeapon]] or 1030910
+_G.ACTION_CONST_POTION 												= not isRetail and dir .. [[Trade_Alchemy_DPotion_A28]] or 967532
+_G.ACTION_CONST_HEARTOFAZEROTH 										= 1869493
+_G.ACTION_CONST_LEFT 												= not isRetail and dir .. [[Spell_Shaman_SpiritLink]] or 237586
+_G.ACTION_CONST_RIGHT 												= not isRetail and dir .. [[INV_BannerPVP_03]] or 132487
+_G.ACTION_CONST_STOPCAST 											= not isRetail and dir .. [[Spell_Magic_PolymorphRabbit]] or 319458
+_G.ACTION_CONST_AUTOTARGET 											= not isRetail and dir .. [[INV_Gizmo_GoblingTonkController]] or 133015
+_G.ACTION_CONST_LASTTARGET											= 237290 -- inv_misc_enggizmos_27
 
-_G.ACTION_CONST_LEFT 												= dir .. [[Spell_Shaman_SpiritLink]]
-_G.ACTION_CONST_RIGHT 												= dir .. [[INV_BannerPVP_03]] 
-_G.ACTION_CONST_STOPCAST 											= dir .. [[Spell_Magic_PolymorphRabbit]]
-_G.ACTION_CONST_AUTOTARGET 											= dir .. [[INV_Gizmo_GoblingTonkController]]
-_G.ACTION_CONST_LASTTARGET											= 237290		-- inv_misc_enggizmos_27
+_G.ACTION_CONST_AUTOSHOOT											= dir .. [[ABILITY_SHOOTWAND]] -- regardless of isRetail (texture 132317, spellID 5019)
+_G.ACTION_CONST_AUTOATTACK											= dir .. [[INV_Sword_04]] -- regardless of isRetail (spellID 7038)
 
-_G.ACTION_CONST_AUTOSHOOT											= dir .. [[ABILITY_SHOOTWAND]] -- 132317 -- spellID: 5019
-_G.ACTION_CONST_AUTOATTACK											= dir .. [[INV_Sword_04]] -- spellID: 7038
-
-_G.ACTION_CONST_HUMAN 												= dir .. [[Spell_Shadow_Charm]]
-_G.ACTION_CONST_SHADOWFORM											= dir .. [[Spell_Shadow_Shadowform]]
+if not isRetail then
+	_G.ACTION_CONST_HUMAN 											= dir .. [[Spell_Shadow_Charm]]
+	_G.ACTION_CONST_SHADOWFORM										= dir .. [[Spell_Shadow_Shadowform]]
+end
 
 -- Class portraits
-_G.ACTION_CONST_PORTRAIT_WARRIOR									= dir .. [[ClassIcon_Warrior]]
-_G.ACTION_CONST_PORTRAIT_PALADIN									= 236260														-- Custom because in TWW it making conflict with Divine Hammer
-_G.ACTION_CONST_PORTRAIT_HUNTER										= dir .. [[ClassIcon_Hunter]]
-_G.ACTION_CONST_PORTRAIT_ROGUE										= dir .. [[ClassIcon_Rogue]]
-_G.ACTION_CONST_PORTRAIT_PRIEST										= dir .. [[ClassIcon_Priest]]
-_G.ACTION_CONST_PORTRAIT_SHAMAN										= dir .. [[TRADE_ARCHAEOLOGY_ANCIENTORCSHAMANHEADDRESS]] 		-- Custom because it making conflict with Bloodlust
-_G.ACTION_CONST_PORTRAIT_MAGE										= dir .. [[ClassIcon_Mage]]
-_G.ACTION_CONST_PORTRAIT_WARLOCK									= dir .. [[ClassIcon_Warlock]]
+_G.ACTION_CONST_PORTRAIT_WARRIOR									= not isRetail and dir .. [[ClassIcon_Warrior]] or 626008
+_G.ACTION_CONST_PORTRAIT_PALADIN									= 236260 -- Custom because in TWW it making conflict with Divine Hammer
+_G.ACTION_CONST_PORTRAIT_HUNTER										= not isRetail and dir .. [[ClassIcon_Hunter]] or 626000
+_G.ACTION_CONST_PORTRAIT_ROGUE										= not isRetail and dir .. [[ClassIcon_Rogue]] or 626005
+_G.ACTION_CONST_PORTRAIT_PRIEST										= not isRetail and dir .. [[ClassIcon_Priest]] or 626004
+_G.ACTION_CONST_PORTRAIT_SHAMAN										= not isRetail and dir .. [[TRADE_ARCHAEOLOGY_ANCIENTORCSHAMANHEADDRESS]] or 454482 -- Custom because it making conflict with Bloodlust
+_G.ACTION_CONST_PORTRAIT_MAGE										= not isRetail and dir .. [[ClassIcon_Mage]] or 626001
+_G.ACTION_CONST_PORTRAIT_WARLOCK									= not isRetail and dir .. [[ClassIcon_Warlock]] or 626007
 _G.ACTION_CONST_PORTRAIT_MONK										= 626002
-_G.ACTION_CONST_PORTRAIT_DRUID										= dir .. [[ClassIcon_Druid]]
-_G.ACTION_CONST_PORTRAIT_DEATHKNIGHT								= dir .. [[spell_deathknight_icytalons]]
+_G.ACTION_CONST_PORTRAIT_DRUID										= not isRetail and dir .. [[ClassIcon_Druid]] or 625999
+_G.ACTION_CONST_PORTRAIT_DEATHKNIGHT								= dir .. [[spell_deathknight_icytalons]] -- regardless of isRetail
+_G.ACTION_CONST_PORTRAIT_DEMONHUNTER								= 1260827 -- 236415
+_G.ACTION_CONST_PORTRAIT_EVOKER										= [[Interface\ICONS\ClassIcon_Evoker.blp]]
 
 -- Class true portaits (used in the scroll table for Healing Engine tab in UI)
 _G.ACTION_CONST_TRUE_PORTRAIT_WARRIOR								= _G.ACTION_CONST_PORTRAIT_WARRIOR
@@ -64,24 +71,29 @@ _G.ACTION_CONST_TRUE_PORTRAIT_PALADIN								= _G.ACTION_CONST_PORTRAIT_PALADIN
 _G.ACTION_CONST_TRUE_PORTRAIT_HUNTER								= _G.ACTION_CONST_PORTRAIT_HUNTER
 _G.ACTION_CONST_TRUE_PORTRAIT_ROGUE									= _G.ACTION_CONST_PORTRAIT_ROGUE	
 _G.ACTION_CONST_TRUE_PORTRAIT_PRIEST								= _G.ACTION_CONST_PORTRAIT_PRIEST
-_G.ACTION_CONST_TRUE_PORTRAIT_DEATHKNIGHT							= 625998
-_G.ACTION_CONST_TRUE_PORTRAIT_SHAMAN								= dir .. [[ClassIcon_Shaman]]
+_G.ACTION_CONST_TRUE_PORTRAIT_SHAMAN								= not isRetail and dir .. [[ClassIcon_Shaman]] or 626006
 _G.ACTION_CONST_TRUE_PORTRAIT_MAGE									= _G.ACTION_CONST_PORTRAIT_MAGE
 _G.ACTION_CONST_TRUE_PORTRAIT_WARLOCK								= _G.ACTION_CONST_PORTRAIT_WARLOCK
 _G.ACTION_CONST_TRUE_PORTRAIT_MONK									= _G.ACTION_CONST_PORTRAIT_MONK
 _G.ACTION_CONST_TRUE_PORTRAIT_DRUID									= _G.ACTION_CONST_PORTRAIT_DRUID
+_G.ACTION_CONST_TRUE_PORTRAIT_DEATHKNIGHT							= 625998
+_G.ACTION_CONST_TRUE_PORTRAIT_DEMONHUNTER							= _G.ACTION_CONST_PORTRAIT_DEMONHUNTER
+_G.ACTION_CONST_TRUE_PORTRAIT_EVOKER								= _G.ACTION_CONST_PORTRAIT_EVOKER
 _G.ACTION_CONST_TRUE_PORTRAIT_PET									= 132161
 _G.ACTION_CONST_TRUE_PORTRAIT_PICKPOCKET							= 136235
 
 -- SpellID
-_G.ACTION_CONST_SPELLID_FREEZING_TRAP								= 1499
-_G.ACTION_CONST_SPELLID_FREEZING_TRAP2								= 60192
+_G.ACTION_CONST_SPELLID_MAXID										= 1273160
+_G.ACTION_CONST_SPELLID_GLADIATORS_MEDALLION						= 208683
+_G.ACTION_CONST_SPELLID_HONOR_MEDALLION								= 195710
+_G.ACTION_CONST_SPELLID_FREEZING_TRAP								= not isRetail and 1499 or 3355
+_G.ACTION_CONST_SPELLID_FREEZING_TRAP2								= not isRetail and 60192 or 3355
 _G.ACTION_CONST_SPELLID_COUNTER_SHOT								= 147362
-
+_G.ACTION_CONST_SPELLID_STORM_BOLT									= 222897
 _G.ACTION_CONST_PICKPOCKET											= 5967
 
 -- Global
-_G.ACTION_CONST_AURAS_MAX_LIMIT										= huge -- Classic 16, TBC 40, WOTLK+ unlimited
+_G.ACTION_CONST_AURAS_MAX_LIMIT										= _G.ACTION_CONST_EXPANSION == 1 and 16 or _G.ACTION_CONST_EXPANSION == 2 and 40 or huge
 _G.ACTION_CONST_MAX_BOSS_FRAMES 									= _G.MAX_BOSS_FRAMES
 _G.ACTION_CONST_UNKNOWN												= _G.UNKNOWN
 _G.ACTION_CONST_CAMERA_MAX_FACTOR									= _G.BINDING_NAME_VEHICLECAMERAZOOMOUT
@@ -99,24 +111,24 @@ _G.ACTION_CONST_ERR_PVP_WARMODE_TOGGLE_OFF							= _G.ERR_PVP_WARMODE_TOGGLE_OFF
 _G.ACTION_CONST_ERR_PVP_WARMODE_TOGGLE_ON							= _G.ERR_PVP_WARMODE_TOGGLE_ON
 
 -- Arena
-_G.ACTION_CONST_PVP_TARGET_ARENA1									= dir .. [[Spell_Warlock_DemonicPortal_Green]]
-_G.ACTION_CONST_PVP_TARGET_ARENA2									= dir .. [[Spell_Nature_MoonGlow]]
-_G.ACTION_CONST_PVP_TARGET_ARENA3 									= dir .. [[PALADIN_HOLY]]
-_G.ACTION_CONST_PVP_TARGET_ARENA4 									= 133875 		-- inv_misc_enggizmos_17
-_G.ACTION_CONST_PVP_TARGET_ARENA5 									= 133876 		-- inv_misc_enggizmos_18
+_G.ACTION_CONST_PVP_TARGET_ARENA1									= not isRetail and dir .. [[Spell_Warlock_DemonicPortal_Green]] or 607512
+_G.ACTION_CONST_PVP_TARGET_ARENA2									= not isRetail and dir .. [[Spell_Nature_MoonGlow]] or 136057
+_G.ACTION_CONST_PVP_TARGET_ARENA3 									= not isRetail and dir .. [[PALADIN_HOLY]] or 535593
+_G.ACTION_CONST_PVP_TARGET_ARENA4 									= 133875 -- inv_misc_enggizmos_17
+_G.ACTION_CONST_PVP_TARGET_ARENA5 									= 133876 -- inv_misc_enggizmos_18
 
-_G.ACTION_CONST_PVP_FOCUS_ARENA1									= 136243 		-- trade_engineering
-_G.ACTION_CONST_PVP_FOCUS_ARENA2									= 135805 		-- spell_fire_fire
-_G.ACTION_CONST_PVP_FOCUS_ARENA3									= 135848 		-- spell_frost_frostnova
-_G.ACTION_CONST_PVP_FOCUS_ARENA4									= 133873 		-- inv_misc_enggizmos_15
-_G.ACTION_CONST_PVP_FOCUS_ARENA5									= 133874 		-- inv_misc_enggizmos_16
+_G.ACTION_CONST_PVP_FOCUS_ARENA1									= 136243 -- trade_engineering
+_G.ACTION_CONST_PVP_FOCUS_ARENA2									= 135805 -- spell_fire_fire
+_G.ACTION_CONST_PVP_FOCUS_ARENA3									= 135848 -- spell_frost_frostnova
+_G.ACTION_CONST_PVP_FOCUS_ARENA4									= 133873 -- inv_misc_enggizmos_15
+_G.ACTION_CONST_PVP_FOCUS_ARENA5									= 133874 -- inv_misc_enggizmos_16
 
 -- Focus
-_G.ACTION_CONST_FOCUS_PLAYER										= 134310		-- inv_misc_monsterscales_08
-_G.ACTION_CONST_FOCUS_PARTY1										= 134314		-- inv_misc_monsterscales_12
-_G.ACTION_CONST_FOCUS_PARTY2										= 134316		-- Inv_misc_monsterscales_14
-_G.ACTION_CONST_FOCUS_PARTY3										= 134318		-- Inv_misc_monsterscales_16
-_G.ACTION_CONST_FOCUS_PARTY4										= 134320		-- Inv_misc_monsterscales_18
+_G.ACTION_CONST_FOCUS_PLAYER										= 134310 -- inv_misc_monsterscales_08
+_G.ACTION_CONST_FOCUS_PARTY1										= 134314 -- inv_misc_monsterscales_12
+_G.ACTION_CONST_FOCUS_PARTY2										= 134316 -- Inv_misc_monsterscales_14
+_G.ACTION_CONST_FOCUS_PARTY3										= 134318 -- Inv_misc_monsterscales_16
+_G.ACTION_CONST_FOCUS_PARTY4										= 134320 -- Inv_misc_monsterscales_18
 
 -- Specialization ID
 _G.ACTION_CONST_WARRIOR_ARMS 										= 71			
@@ -140,7 +152,7 @@ _G.ACTION_CONST_PRIEST_HOLY 										= 257
 _G.ACTION_CONST_PRIEST_SHADOW 										= 258			
 
 _G.ACTION_CONST_SHAMAN_ELEMENTAL 									= 262			
-_G.ACTION_CONST_SHAMAN_ENCHANCEMENT 								= 263 -- miss typo, must be here until fix
+_G.ACTION_CONST_SHAMAN_ENCHANCEMENT 								= 263 -- TODO: miss typo, must be here until fix
 _G.ACTION_CONST_SHAMAN_ENHANCEMENT									= 263
 _G.ACTION_CONST_SHAMAN_RESTORATION									= 264		
 
@@ -178,21 +190,21 @@ _G.ACTION_CONST_INVSLOT_AMMO										= _G.INVSLOT_AMMO 		-- 0
 _G.ACTION_CONST_INVSLOT_NECK       									= _G.INVSLOT_NECK 		-- 2
 -- _G.ACTION_CONST_INVSLOT_SHOULDAC   								= _G.INVSLOT_SHOULDER 	-- 3
 -- _G.ACTION_CONST_INVSLOT_BODY       								= _G.INVSLOT_BODY 		-- 4
--- _G.ACTION_CONST_INVSLOT_CHEST      								= _G.INVSLOT_CHEST 	-- 5
--- _G.ACTION_CONST_INVSLOT_WAIST      								= _G.INVSLOT_WAIST 	-- 6
+-- _G.ACTION_CONST_INVSLOT_CHEST      								= _G.INVSLOT_CHEST 		-- 5
+-- _G.ACTION_CONST_INVSLOT_WAIST      								= _G.INVSLOT_WAIST 		-- 6
 -- _G.ACTION_CONST_INVSLOT_LEGS       								= _G.INVSLOT_LEGS 		-- 7
 -- _G.ACTION_CONST_INVSLOT_FEET       								= _G.INVSLOT_FEET 		-- 8
--- _G.ACTION_CONST_INVSLOT_WRIST      								= _G.INVSLOT_WRIST 	-- 9
+-- _G.ACTION_CONST_INVSLOT_WRIST      								= _G.INVSLOT_WRIST 		-- 9
 -- _G.ACTION_CONST_INVSLOT_HAND       								= _G.INVSLOT_HAND 		-- 10
 -- _G.ACTION_CONST_INVSLOT_FINGAC1    								= _G.INVSLOT_FINGER1 	-- 11
 -- _G.ACTION_CONST_INVSLOT_FINGAC2    								= _G.INVSLOT_FINGER2 	-- 12
 _G.ACTION_CONST_INVSLOT_TRINKET1   									= _G.INVSLOT_TRINKET1 	-- 13
 _G.ACTION_CONST_INVSLOT_TRINKET2   									= _G.INVSLOT_TRINKET2 	-- 14
 -- _G.ACTION_CONST_INVSLOT_BACK       								= _G.INVSLOT_BACK		-- 15
-_G.ACTION_CONST_INVSLOT_MAINHAND   									= _G.INVSLOT_MAINHAND  -- 16
+_G.ACTION_CONST_INVSLOT_MAINHAND   									= _G.INVSLOT_MAINHAND  	-- 16
 _G.ACTION_CONST_INVSLOT_OFFHAND    									= _G.INVSLOT_OFFHAND	-- 17
-_G.ACTION_CONST_INVSLOT_RANGED     									= _G.INVSLOT_RANGED	-- 18
--- _G.ACTION_CONST_INVSLOT_TABARD     								= _G.INVSLOT_TABARD	-- 19
+_G.ACTION_CONST_INVSLOT_RANGED     									= _G.INVSLOT_RANGED		-- 18
+-- _G.ACTION_CONST_INVSLOT_TABARD     								= _G.INVSLOT_TABARD		-- 19
 _G.ACTION_CONST_INVSLOT_LAST_EQUIPPED 								= _G.INVSLOT_LAST_EQUIPPED 
 
 _G.ACTION_CONST_EQUIPMENT_MANAGER 									= _G.EQUIPMENT_MANAGER

@@ -1,0 +1,111 @@
+[Rogue v17]
+Fixed ApplyPoisons for MetaEngine
+
+[Rogue v16]
+OilofImmolation									- Fixed wrong Type
+Optimized code for MetaEngine release
+Optimized code for 5-Unit system release
+
+[Rogue v15]
+SwordSpecialization								- Updated tooltip description for Trick
+OilofImmolation									- Added in rotation with slider in PvE section of the Warrior tab
+AutoTarget										- Updated for range API changes
+
+[Rogue v14]
+Added checkbox "SliceandDice 100% uptime" that will try to keep buff up as long as it's possible
+Stealth											- Removed mouseover unit trigger
+
+[Rogue v13]
+Vanish											- Added condition to skip usage if you're on bg and have any flags
+Stealth											- Added condition to skip usage if you're on bg and have any flags
+Opener 											- Added logic to skip next ordered opener action if unit has BreakAble debuff and you're not at full energy (works more stable if enabled toggle for "OpenerWaitToBeDone")
+
+[Rogue v12]
+Gouge											- Fixed miss typo with :AbsentImun (was missed important auras such as Divine Shield)
+Blind											- Fixed miss typo with :AbsentImun (was missed important auras such as Divine Shield)
+Backstub										- Fixed incorrect skip in PvE use against boss - removed condition of threat
+
+[Rogue v11]
+Vanish											- Added additional debuffs Phantom Strike and Faerie Fire (Feral) to query as usable condition 
+Stealth											- Added additional debuffs Phantom Strike and Faerie Fire (Feral) to query as usable condition 
+
+[Rogue v10]
+Fixed lua error Unit.lua Action.Unit():.. was used with 'nil' unitID. Found problem in TMW snippet here:[string "TMW Snippet: Rogue"] line 1668:
+
+[Rogue v9]
+Fixed lua error "SapUnits" attemp to index nil 
+
+[Rogue v8]
+Removed retired interrupt groups
+Upgraded code for synchronization with new interrupt system 
+UI 												- Re-anchored main frame to make it easier drag able without open deep settings
+
+[Rogue v7]
+Fixed UI display for poison's enchant name
+Removed UI paperdoll colors and db
+Added secured frame to perform restricted environment for poison apply without click on paperdoll 
+Fixed bug with double re-casting enchant
+Fixed texture bug with Crippling Poison II
+Ambush											- Added missed condition to check dagger equipped in the main hand for selected Opener as Ambush
+Backstub										- Added missed condition to check dagger equipped in the main hand for selected Opener as Backstub
+Fillers (SinisterStrike, Hemorrhage)			- Fixed incorrect usage in PvP mode if character has equipped dagger in main hand due trying to cast instead Backstub
+Distract										- Added new usage in PvP when you're rooted and target is casting 
+Sap												- Added check for already applied debuff
+Sap 											- Added in SapUnits toggle the @target and @mouseover destination unitIDs
+Blind 											- Added in BlindUnitsPvP toggle the @target and @mouseover destination unitIDs
+Vanish											- Added new toggle use if you have specific auras (slow, roots) with relative category in Auras tab 
+Vanish											- Added check for reagent 
+Vanish 											- Added condition to check Faerie Fire and Flare (only defensive use)
+Stealth 										- Added condition to check Faerie Fire and Flare
+ExposeArmor										- Fixed time to die timer which obvious caused issues to cast it on bosses and players (down from >=30 to >=13 condition)
+
+[Rogue v6]
+Disabled cooldown text and swing pulse animation effects
+Backstub							- Will now interact with general saving pull energy to provide more accurate use for rest fillers
+
+[Rogue v5]
+Optimized code for more faster performance
+Fixed lua error ...\AddOns\TheAction Classic\Modules\Engines\Combat.lua:1799: Usage: UnitGUID("unit")
+Fixed lua error 1620: attempt to index a nil value (was missed UI element for Blind units)
+Fixed lua error 991: attempt to call global 'MainHandFrameSetTexture' (a nil value)
+Fixed damage decrease modificator for PvP, it will now changes depends on rotation mode (PvP has 0.4, PvE remains to be 0.1)
+Fixed visual issues, glowing cursor and rest issues for enchant system
+PickPocket							- Removed condition to use on players 
+
+[Rogue v4]
+Devs found bug and fixed way which recently worked to mimic click on weapon slot, so instead of click it will open now character window to let user to click it manually 
+Added new toggles for main and off hands for toggle character window
+Added method to replace texture with green color on hand slots in character window to help understand what to click 
+Fixed lua miss typo with EnemyTeam and FriendlyTeam calls 
+Fixed lua error :1415: attempt to perform arithmetic on field 'GetCurrentGCD' (a function value)
+Fixed issue when profile closed instantly some dialog windows
+Fixed issue when custom toggle on opener didn't checked imun buffs such as Ice Block 
+Fixed IsEviscerateProfitableThanSliceandDice, GetEviscerateDamage damage calculation
+Ambush								- Auto opener will no longer try to use it on Warrior and Paladin in PvP (still will able to do if all unavailable as last priority)
+Gouge								- Added buff check for Blink vs Mage as additional trigger, reduced DR to tick 50% (down from 100%)
+Eviscerate							- Added time to die condition to use it additionaly if target will die in less than next gcd with current spining time 
+Perception							- Added invis catcher for duel and wpvp 
+Rupture								- Fixed issue when it was used too early than dying on target (mostly because of warriors with execute in raid, it's breaks ttd)
+Rupture								- Fixed issue when it was used on Ragnaros (he has imun for it)
+Gouge								- Fixed behind conditions (seen when wasn't used to attemp interrupt casts)
+SliceandDice						- Uptime decreased on remain buff duration modifier to 1.4 (down from 1.8)
+SliceandDice						- Now will be used only in melee
+PickPocket							- Added skipping on UI message "no pockets to pick"
+
+[Rogue v3] 
+Eviscerate							- Fixed damage math formula 
+Rupture								- Fixed TTD in duel vs Paladin and Warrior now has 6 instead of 16
+Rupture								- Added use vs Rogues in PvP 
+KidneyShot							- Added condition to check Blink cd in PvP vs Mages 
+KidneyShot							- Added condition to use at 3+ CP if remain current CC will went off before build more energy or CP 
+
+[Rogue v2] 
+Fixed miss typo which caused wrong behavior to save energy on the next required spender  
+Fixed opener when he forced to use OFF on custom choice 
+Fixed large text in ProfileUI on Russian localization 
+Reduced damage calculation factor (seen when Eviscerate used too early as "finish him" nuke)
+SinisterStrike, Hemorrhage 			- Fixed issue which prevent use Backstub if energy drops below required limit 
+Backstub							- Added additional conditions which helping to determine behind position in PvE 
+
+[Rogue v1]
+Release

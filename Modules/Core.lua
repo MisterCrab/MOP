@@ -112,7 +112,8 @@ local FoodAndDrink 									= {
 	[GetSpellName(26263)] 							= true,	-- Dim Sum (doesn't triggers Food and Drink)
 	[GetSpellName(26030)] 							= true,	-- Windblossom Berries (doesn't triggers Food and Drink)
 	[GetSpellName(25691)] 							= true, -- Brain Food (unknown what does it exactly trigger)
-	[GetSpellName(746)] 							= true,	-- First Aid
+	[GetSpellName(746) or ""] 						= true,	-- First Aid
+	[GetSpellName(30020) or ""]						= true,	-- First Aid
 }
 local FoodAndDrinkBlacklist 						= {
 	[GetSpellName(396092) or ""]					= true, -- Well Fed
@@ -195,9 +196,11 @@ A.Trinket1 							= Create({ Type = "TrinketBySlot", 		ID = CONST.INVSLOT_TRINKE
 A.Trinket2 							= Create({ Type = "TrinketBySlot", 		ID = CONST.INVSLOT_TRINKET2, 					BlockForbidden = true, Desc = "Lower Trinket (/use 14)" 													})
 A.Shoot								= Create({ Type = "Spell", 				ID = 5019, 										QueueForbidden = true, BlockForbidden = true, Hidden = true,  Desc = "Wand" 								})
 A.AutoShot							= Create({ Type = "Spell", 				ID = 75, 										QueueForbidden = true, BlockForbidden = true, Hidden = true,  Desc = "Hunter's shoot" 						})
-A.HSFel1							= Create({ Type = "Item", 				ID = 36894, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
-A.HSFel2							= Create({ Type = "Item", 				ID = 36893, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
-A.HSFel3							= Create({ Type = "Item", 				ID = 36894, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
+if BuildToC >= 30000 then
+	A.HSFel1							= Create({ Type = "Item", 				ID = 36894, 									QueueForbidden = true, Desc = "[6] HealthStone" 														})
+	A.HSFel2							= Create({ Type = "Item", 				ID = 36893, 									QueueForbidden = true, Desc = "[6] HealthStone" 														})
+	A.HSFel3							= Create({ Type = "Item", 				ID = 36894, 									QueueForbidden = true, Desc = "[6] HealthStone" 														})
+end
 A.HSGreater1						= Create({ Type = "Item", 				ID = 5510, 										QueueForbidden = true, Desc = "[6] HealthStone" 															})
 A.HSGreater2						= Create({ Type = "Item", 				ID = 19010, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
 A.HSGreater3						= Create({ Type = "Item", 				ID = 19011, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
@@ -215,6 +218,7 @@ A.HSMinor2							= Create({ Type = "Item", 				ID = 19004, 									QueueForbidd
 A.HSMinor3							= Create({ Type = "Item", 				ID = 19005, 									QueueForbidden = true, Desc = "[6] HealthStone" 															})
 A.DarkRune							= Create({ Type = "Item", 				ID = 20520, Texture = 134417,																				  Desc = "[3,4,6] Runes" 						})
 A.DemonicRune						= Create({ Type = "Item", 				ID = 12662, Texture = 134417,																				  Desc = "[3,4,6] Runes" 						})
+A.WhipperRootTuber					= Create({ Type = "Item", 				ID = 11951,																				  					  Desc = "[3,4,6] Extra HS"						})
 A.LimitedInvulnerabilityPotion		= Create({ Type = "Potion", 			ID = 3387																																					})
 A.LivingActionPotion				= Create({ Type = "Potion", 			ID = 20008																																					})
 A.RestorativePotion					= Create({ Type = "Potion", 			ID = 9030																																					})
@@ -486,18 +490,18 @@ function A.Rotation(icon)
 			end
 		end 
 		
-		if not Player:IsStealthed() then 
-			-- Healthstone 
+		-- Healthstone | WhipperRootTuber
+		if not Player:IsStealthed() then  
 			local Healthstone = GetToggle(1, "HealthStone") 
-			if Healthstone >= 0 then 
-				local HealthStoneObject = DetermineUsableObject(player, true, nil, true, nil, A.HSFel3, A.HSFel2, A.HSFel1, A.HSGreater3, A.HSGreater2, A.HSGreater1, A.HS3, A.HS2, A.HS1, A.HSLesser3, A.HSLesser2, A.HSLesser1, A.HSMajor3, A.HSMajor2, A.HSMajor1, A.HSMinor3, A.HSMinor2, A.HSMinor1)
-				if HealthStoneObject then 			
+			if Healthstone >= 0 and (BuildToC < 110000 or A.ZoneID ~= 1684 or Unit(player):HasDeBuffs(320102) == 0) then -- Retail: Theater of Pain zone excluding "Blood and Glory" debuff 
+				local HealingItem = DetermineUsableObject(player, true, nil, true, nil, A.HSGreater3, A.HSGreater2, A.HSGreater1, A.HS3, A.HS2, A.HS1, A.HSLesser3, A.HSLesser2, A.HSLesser1, A.HSMajor3, A.HSMajor2, A.HSMajor1, A.HSMinor3, A.HSMinor2, A.HSMinor1, A.WhipperRootTuber)
+				if HealingItem then 			
 					if Healthstone >= 100 then -- AUTO 
 						if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
-							return HealthStoneObject:Show(icon)	
+							return HealingItem:Show(icon)	
 						end 
 					elseif Unit(player):HealthPercent() <= Healthstone then 
-						return HealthStoneObject:Show(icon)								 
+						return HealingItem:Show(icon)								 
 					end 
 				end 
 			end 		
@@ -557,7 +561,7 @@ function A.Rotation(icon)
 		end 
 	end 
 	
-	-- [3] Single / [4] AoE / [6-8] Passive: @player-party1-3, @raid1-3, @arena1-3 + Active: other AntiFakes
+	-- [3] Single / [4] AoE / [6-10] Passive: @player-party1-4, @raid1-5, @arena1-5 + Active: other AntiFakes
 	if metaobj(icon) then 
 		if meta == 3 then SetMetaAlpha(meta, 1) end
 		return true 

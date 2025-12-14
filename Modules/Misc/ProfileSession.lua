@@ -33,7 +33,7 @@ local _G, setmetatable, getmetatable, next, select, error, rawset, rawget, type,
 	  _G, setmetatable, getmetatable, next, select, error, rawset, rawget, type, ipairs, pairs, assert, coroutine
 
 local debugprofilestop			= _G.debugprofilestop
-local message					= _G.message	
+local message					= _G.message or _G.SetBasicMessageDialogText
 local CreateFrame				= _G.CreateFrame  
 local UIParentLoadAddOn			= _G.UIParentLoadAddOn
 local IsAddOnLoaded 			= _G.IsAddOnLoaded or _G.C_AddOns.IsAddOnLoaded

@@ -1,0 +1,37 @@
+[Basic v9]
+Upgraded code for synchronization with new interrupt system 
+Removed retired Interrupt groups
+BloodFury				- Added range check 
+UI 						- Re-anchored main frame to make it easier drag able without open deep settings
+UI 						- Fixed localization ruRU
+
+[Basic v8]
+Optimized code for more faster performance
+Fixed miss typo with EnemyTeam and FriendlyTeam
+
+[Basic v7]
+Cached all strings (less memory usage)
+Fixed when friendly rotation was used as an enemy 
+Added LimitedInvulnerabilityPotion, LivingActionPotion, RestorativePotion, SwiftnessPotion, Healing Potions (default)
+Added Perception
+
+[Basic v6]
+Added Loss of Control frames
+
+[Basic v5]
+Added Warrior's and Rogue's AutoShoot support
+Added visual border on visible APL 
+
+[Basic v4]
+Fixed Interrupts for arena1-3 by Player 
+Added Mana Runes 
+
+[Basic v3]
+Added Pet kicks for arena1-3
+Added condition to check interrupt able cast for antifake kick 
+ 
+[Basic v2] 
+Cleared things, little bit better performance
+
+[Basic v1]
+Release 

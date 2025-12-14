@@ -5,7 +5,7 @@ local huge 						= math.huge
 local math_max					= math.max 
 local math_min					= math.min	  
 local math_floor				= math.floor 	  
-local tsort						= table.sort	
+local tsort						= table.sort
 local wipe 						= _G.wipe 	 
 
 local SPELL_FAILED_NOT_BEHIND	= _G.SPELL_FAILED_NOT_BEHIND
@@ -54,6 +54,10 @@ local issecure					= _G.issecure
 
 local 	 UnitLevel,    UnitPower, 	 UnitPowerMax, 	  UnitStagger, 	  UnitAttackSpeed, 	  UnitRangedDamage,    UnitDamage, 	  UnitGUID,     UnitAura =
 	  _G.UnitLevel, _G.UnitPower, _G.UnitPowerMax, _G.UnitStagger, _G.UnitAttackSpeed, _G.UnitRangedDamage, _G.UnitDamage, _G.UnitGUID,  _G.UnitAura or _G.C_UnitAuras.GetAuraDataByIndex
+-- Classic - TBC
+if BuildToC < 30000 then
+	UnitAura = A.UnitAura or TMW.UnitAura or _G.UnitAura or _G.C_UnitAuras.GetAuraDataByIndex
+end
 
 local	 GetPowerRegen,    GetRuneCooldown,	   GetRuneType,    GetShapeshiftForm, 	 GetCritChance,    GetHaste, 	GetMasteryEffect, 	 GetVersatilityBonus, 	 GetCombatRatingBonus, 	  GetComboPoints =
 	  _G.GetPowerRegen, _G.GetRuneCooldown, _G.GetRuneType, _G.GetShapeshiftForm, _G.GetCritChance, _G.GetHaste, _G.GetMasteryEffect, _G.GetVersatilityBonus, _G.GetCombatRatingBonus, _G.GetComboPoints 
@@ -65,13 +69,13 @@ local 	 IsEquippedItem, 	IsStealthed, 	IsMounted, 	  IsFalling, 	IsSwimming,    
 	  _G.IsEquippedItem, _G.IsStealthed, _G.IsMounted, _G.IsFalling, _G.IsSwimming, _G.IsSubmerged
 	  
 local 	 CancelUnitBuff, 	CancelSpellByName, 	  CombatLogGetCurrentEventInfo =
-	  _G.CancelUnitBuff, _G.CancelSpellByName, _G.CombatLogGetCurrentEventInfo
+	  _G.CancelUnitBuff, _G.CancelSpellByName, _G.CombatLogGetCurrentEventInfo or _G.C_CombatLog.GetCurrentEventInfo
 	  
 -- Bags / Inventory
 local 	 C_Container = _G.C_Container
 local 	 GetContainerNumSlots, 	  									  GetContainerItemID, 	 								   GetInventoryItemID, 	  										  GetItemInfoInstant,    								   GetItemCount, 	  									  IsEquippableItem =	  
 	  _G.GetContainerNumSlots or C_Container.GetContainerNumSlots, _G.GetContainerItemID or C_Container.GetContainerItemID, _G.GetInventoryItemID, C_Item and C_Item.GetItemInfoInstant or _G.GetItemInfoInstant, C_Item and C_Item.GetItemCount or _G.GetItemCount, C_Item and C_Item.IsEquippableItem or _G.IsEquippableItem
-	  
+	
 -- Glyphs: WOTLK - BFA
 local C_SpecializationInfo 		= _G.C_SpecializationInfo
 local  																		   GetActiveTalentGroup,	GetGlyphSocketInfo,	   GetNumGlyphSockets = 
@@ -238,7 +242,7 @@ end
 
 function Data.updateAutoShoot(...)
 	local unitID, _, spellID = ... 
-	if unitID == "player" and A.IamRanger and Data.IsShoot[A_GetSpellInfo(spellID)]  then 
+	if unitID == "player" and A.IamRanger and Data.IsShoot[A_GetSpellInfo(spellID)] then 
 		Data.AutoShootNextTick = TMW.time + UnitRangedDamage("player")
 	end 
 end 
@@ -644,7 +648,7 @@ function Player:CancelBuff(buffName)
 		for i = 1, huge do			
 			local Name = UnitAura("player", i, "HELPFUL")
 			
-			if type(Name) == "table" then 	
+			if type(Name) == "table" then 
 				Name = Name.name
 			end  			
 			

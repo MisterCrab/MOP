@@ -1,0 +1,102 @@
+[Priest v19]
+Mind Flay 							- Added all ranks
+
+[Priest v18]
+Removed HE_AnyRole toggle check
+Optimized code for MetaEngine release
+Optimized code for 5-Unit system release
+
+[Priest v17]
+PowerWordShield 					- Now respect HP slider from HolyNova & PoWS section on normal rotation phase except casters with mana resource
+PowerWordShield 					- Now respect HP slider from HolyNova & PoWS section on SelfPoWs checkbox except when we need shield self buff if we got attacked by enemies to stop mini interrupts caused by attacker's damage
+HolyNova							- Fixed when Set Blocker didn't work for it
+
+[Priest v16]
+Fixed lua error ...HealingEngine.lua:1384: Usage: UnitGUID("unit") caused by Snippet: Priest line 1409 incorrect unitID
+Fixed lua errpr .. Prediction Healing:95: attempt to index global 'description' (a nil value)
+
+[Priest v15]
+Removed retired interrupt groups
+Upgraded code for synchronization with new interrupt system 
+Upgraded code for synchronization with new healing system:
+* DispelMagic / AbolishDisease / CureDisease is Dispel
+* PowerWordShield is Shields
+* Renew is HoTs
+* PrayerofSpirit / DivineSpirit / PrayerofFortitude / PowerWordFortitude / PrayerofShadowProtection / ShadowProtection / FearWard is Utils
+Added casting internal latency, should help to fix double re-casting DoTs
+Fixed passive rotation, was performing wrong start index 
+Fixed a lot of miss typo in the code 
+Minor optimized code
+Increased dying phase window of healing, added only in combat condition 
+Changed rotation priority order in the healing spells, improved healing rotation 
+HealingEngine 						- Toggles PreParePOWS and PrePareRenew now sorts units by lowest real health percent, so order of applying will go from lowest to highest by health units
+HealingEngine 						- Fixed toggle PrePareRenew when it was stopped on unit if RenewOnlyTank toggle was enabled
+Berserking							- Fixed condition (2) with miss typo on GetHealthFrequency
+Re-written Prediction 				- Sync with healing engine predict settings, HP spell sliders will do health limit function instead of required forced health
+UI 									- Re-anchored main frame to make it easier drag able without open deep settings
+
+[Priest v14]
+Fixed lua error 371: Unit.lua Action.Unit():.. was used with 'nil' unitID
+
+[Priest v13]
+Fixed lua error 307: 'for' limit must be a number
+
+[Priest v12]
+Improved stopcast overhealing (same way like on Paladin)
+Optimized code for more faster performance
+PredictHeal							- Added GetSpellBonusHealing and HealModifier by HealComm in formul
+PredictHeal							- Fixed issues due difference in API, now it's updated to actual
+PrayerofHealing						- Fixed Auto party members amount if party is not full (if not full then limit to 3+ at least if we have 3+ in group)
+
+[Priest v11]
+Fixed lua miss typo with EnemyTeam and FriendlyTeam calls 
+Fixed bugs with predict health for different rank healing on AUTO mode 
+Perception							- Added invis catcher for duel and wpvp 
+ShackleUndead						- Fixed DR category 
+
+[Priest v10]
+Added toggle in UI for use racials while crown control such as Stoneform and WilloftheForsaken
+Added toggle in UI for use specified potion (default MajorManaPotion)
+ManaPotion							- Fixed wrong element type in ProfileUI which could cause lua error (was checkbox, now it's slider)
+Stoneform							- Now functional by using template from Core.lua
+HealingPotion						- Added 
+LimitedInvulnerabilityPotion		- Added 
+LivingActionPotion					- Added 
+RestorativePotion					- Added 
+SwiftnessPotion						- Added 
+LesserHeal 							- Changed priority to lowest (was caused issues for many people to cast other spells if they are not blocked)
+Trinkets							- Added condition to check combat state in friendly rotation
+PredictHealing						- Added condition to make zero incoming heal per second prediction if not a raid 
+
+[Priest v9]
+Added Loss of Control frames
+
+[Priest v8]
+Added visual border on visible APL 
+
+[Priest v7]
+Added Toggle for Renew to use only on Tank 
+
+[Priest v6]
+Fixed lua error 634 attempt to index global 'MindSootheLevelByRank'
+Fixed lua error 286 attempt to index local 'Obj'
+
+[Priest v5]
+Renew and Power Word: Shield now will be used out of combat at full health only on tank
+
+[Priest v4]
+Touch of Weakness removed range checks (caused wrong distance while leveling)
+
+[Priest v3]
+Updated to sync up with the last global API 
+Fear MSG now checking properly available conditions on the spell
+Fixed Predict Healing lua errors (was broken in v2)
+Fixed StartByPreCast bug when it double casted spell 
+
+[Priest v2] 
+Fixed miss typo for unit power type, FURY replaced by RAGE, it will skip use PoW:S on warriors and ferals to let them gain rage 
+Tweaked Predict Healing - ByPass HOT category (Renew, Power Word: Shield), it will first check by dificit health or if health is enough then predict by damage incoming with healing compare (auto toggle only)
+Touch of Weakness will no longer been used if some one by attackers got debuff by attacking you in melee
+
+[Priest v1]
+Classic Release. Full all specs PvP PvE

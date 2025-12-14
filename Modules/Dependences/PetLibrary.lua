@@ -105,7 +105,7 @@ local 	 IsActionInRange, 	 GetActionInfo,    PlaceAction,    ClearCursor,    Get
 local GameLocale 						= _G.GetLocale()
 local GetUnitSpeed						= _G.GetUnitSpeed
 local CreateFrame						= _G.CreateFrame 	  
-local CombatLogGetCurrentEventInfo		= _G.CombatLogGetCurrentEventInfo	 
+local CombatLogGetCurrentEventInfo		= _G.CombatLogGetCurrentEventInfo or _G.C_CombatLog.GetCurrentEventInfo	 
 local InCombatLockdown					= _G.InCombatLockdown   
 local UnitGUID							= _G.UnitGUID
 local UnitName							= _G.UnitName	

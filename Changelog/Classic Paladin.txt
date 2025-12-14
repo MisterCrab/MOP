@@ -1,0 +1,48 @@
+[Paladin v9]
+OilofImmolation									- Fixed wrong Type
+Removed HE_AnyRole toggle check
+Fixed Print nil error
+Optimized code for MetaEngine release
+Optimized code for 5-Unit system release
+
+[Paladin v8]
+Added advanced Seal Twisting: added more deep logic for all options and added "SealofCommand/SealofRighteousness" standalone option
+Changed operator from "OR" to "AND" and increased HP default slider for DivineShield, DivineProtection
+OilofImmolation							- Added in rotation with slider in PvE section of the Paladin tab
+
+[Paladin v7]
+Fixed lua code for blessing MSG words, was wrong unitID 
+
+[Paladin v6]
+Upgraded code for synchronization with new interrupt system 
+Upgraded code for synchronization with new healing system:
+* Cleanse / Purify is Dispel
+* Blessing of Protection is Shields
+* Blessing of Sacrifice is HoTs
+* Blessing of Freedom / Blessing Buff is Utils
+Fixed CancelBuff miss typo
+Re-written Prediction 					- Sync with healing engine predict settings, HP spell sliders will do health limit function instead of required forced health
+Deffensives 							- Fixed usage while DivineShield or DivineProtection is up
+Auras									- Reworked logic, added in logic shadow/fire/frost damage as counter, fixed re-switch bugs, changed priority order
+UI 										- Re-anchored main frame to make it easier drag able without open deep settings
+
+[Paladin v5]
+Disabled cooldown text and swing pulse animation effects
+Added condition to skip totems as enemy unit around for AoE rotation 
+
+[Paladin v4]
+Optimized code for more faster performance
+Fixed probably lua nil table index error in SomeOneCastingOnMeCC for CC casts catching by BoS
+PredictHeal								- Added GetSpellBonusHealing and HealModifier by HealComm in formul
+StopCast								- Improved logic (now doesn't require to check current primary unit if destination was known as unitID) and increased delay to make stop earlier
+SealofRighteousness						- Now replaces SealofCommand if you have Reckoning buff or your weapon faster either equal 3.4 speed 
+SenseUndead								- Fixed issue with reapply tracking 
+
+[Paladin v3]
+Fixed different bugs with Seals
+
+[Paladin v2]
+Fixed lua error :344: attempt to compare number with nil
+
+[Paladin v1]
+Full release
