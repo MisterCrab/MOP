@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "14.12.2025"
+local DateTime 														= "24.12.2025"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -20196,15 +20196,18 @@ local specs = {
 
 function Action.GetNumSpecializations()
 	-- @return number 
-	return GetNumSpecializations and GetNumSpecializations() or 3
+	-- _G.GetNumSpecializations() returns 0 on Classic
+	return #classSpecIds[Action.PlayerClass]
 end
 
 function Action.GetCurrentSpecialization()
 	-- @return number 
 	-- Note: Index of the current specialization, otherwise 1 (assume it's first spec)
+	local specIDs = classSpecIds[Action.PlayerClass]
 	local specID = Action.GetCurrentSpecializationID() 
-	for i = 1, #classSpecIds[Action.PlayerClass] do 
-		if specID == classSpecIds[Action.PlayerClass][i] then 
+		
+	for i = 1, #specIDs do 
+		if specID == specIDs[i] then 
 			return i 
 		end 
 	end 
@@ -20214,13 +20217,13 @@ end
 
 function Action.GetCurrentSpecializationID() 
 	-- @return specID 
-	-- Note: If it's zero we assume what our spec is some damager 
+	-- Note: If it's zero we assume that our spec is some damager 
 	local specIDs = classSpecIds[Action.PlayerClass]
 	
 	local biggest = 0
-	local specID
+	local specID, localizedName, _, points
 	for i = 1, #specIDs do
-		local localizedName, _, points = GetTalentTabInfo(i)
+		localizedName, _, points = GetTalentTabInfo(i)
 		if type(points) == "string" then 
 			_, localizedName, _, _, points = GetTalentTabInfo(i)
 			if not points and biggest == 0 and Action.BuildToC >= 50500 then -- MoP+ style with backward compatibility for Classic - Cata
