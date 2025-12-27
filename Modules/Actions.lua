@@ -110,6 +110,7 @@ local itemCategory 			= {
 
 local GetNetStats 			= _G.GetNetStats  	
 local GameLocale 			= _G.GetLocale()
+local IsEventValid			= _G.C_EventUtils and _G.C_EventUtils.IsEventValid or function() return true end
 local C_CVar				= _G.C_CVar
 local SetCVar				= C_CVar and C_CVar.SetCVar or _G.SetCVar
 local GetCVar				= C_CVar and C_CVar.GetCVar or _G.GetCVar
@@ -737,7 +738,11 @@ end
 -- "LEARNED_SPELL_IN_TAB" > "TRAINER_UPDATE" > "SKILL_LINES_CHANGED"
 -- "LEARNED_SPELL_IN_TAB" new added
 -- "SKILL_LINES_CHANGED" new added / existing level (rank) update, replaced to "TRAINER_UPDATE" because of lag spikes on MetaEngine
-Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_TAB", 		A.UpdateSpellBook)
+if IsEventValid("LEARNED_SPELL_IN_TAB") then
+	Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_TAB", 		A.UpdateSpellBook)
+else
+	Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_SKILL_LINE", A.UpdateSpellBook)
+end
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 				A.UpdateSpellBook) 
 TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", 					A.UpdateSpellBook)
 TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", function()	A.UpdateSpellBook(true) end)
