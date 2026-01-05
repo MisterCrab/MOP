@@ -223,12 +223,12 @@ A.LimitedInvulnerabilityPotion		= Create({ Type = "Potion", 			ID = 3387								
 A.LivingActionPotion				= Create({ Type = "Potion", 			ID = 20008																																					})
 A.RestorativePotion					= Create({ Type = "Potion", 			ID = 9030																																					})
 A.SwiftnessPotion					= Create({ Type = "Potion", 			ID = 2459																																					}) -- is situational too much and better make own conditions inside each profile depends on class and situation 
-A.MinorHealingPotion				= Create({ Type = "Potion", 			ID = 118																																					})
-A.LesserHealingPotion				= Create({ Type = "Potion", 			ID = 858																																					})
-A.HealingPotion						= Create({ Type = "Potion", 			ID = 929																																					})
-A.GreaterHealingPotion				= Create({ Type = "Potion", 			ID = 1710																																					})
-A.SuperiorHealingPotion				= Create({ Type = "Potion", 			ID = 3928																																					})
-A.MajorHealingPotion				= Create({ Type = "Potion", 			ID = 13446																																					})
+A.MinorHealingPotion				= Create({ Type = "Potion", 			ID = 118, FixedTexture = CONST.HEALINGPOTION																												})
+A.LesserHealingPotion				= Create({ Type = "Potion", 			ID = 858, FixedTexture = CONST.HEALINGPOTION																												})
+A.HealingPotion						= Create({ Type = "Potion", 			ID = 929, FixedTexture = CONST.HEALINGPOTION																												})
+A.GreaterHealingPotion				= Create({ Type = "Potion", 			ID = 1710, FixedTexture = CONST.HEALINGPOTION																												})
+A.SuperiorHealingPotion				= Create({ Type = "Potion", 			ID = 3928, FixedTexture = CONST.HEALINGPOTION																												})
+A.MajorHealingPotion				= Create({ Type = "Potion", 			ID = 13446, FixedTexture = CONST.HEALINGPOTION																												})
 
 local function IsShoot(unit)
 	return 	playerClass ~= "WARRIOR" and playerClass ~= "ROGUE" and 		-- their shot must be in profile 

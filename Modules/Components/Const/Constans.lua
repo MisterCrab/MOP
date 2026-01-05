@@ -35,6 +35,7 @@ _G.ACTION_CONST_PAUSECHECKS_IS_EAT_OR_DRINK 						= 134062
 _G.ACTION_CONST_TRINKET1 											= not isRetail and dir .. [[Garrison_BlueWeapon]] or 1030902
 _G.ACTION_CONST_TRINKET2 											= not isRetail and dir .. [[Garrison_GreenWeapon]] or 1030910
 _G.ACTION_CONST_POTION 												= not isRetail and dir .. [[Trade_Alchemy_DPotion_A28]] or 967532
+_G.ACTION_CONST_HEALINGPOTION 										= not isRetail and dir .. [[inv_misc_potionsetF.blp]] or 463548
 _G.ACTION_CONST_HEARTOFAZEROTH 										= 1869493
 _G.ACTION_CONST_LEFT 												= not isRetail and dir .. [[Spell_Shaman_SpiritLink]] or 237586
 _G.ACTION_CONST_RIGHT 												= not isRetail and dir .. [[INV_BannerPVP_03]] or 132487
