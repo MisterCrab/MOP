@@ -164,6 +164,7 @@ local IsBreakAbleDeBuff = {}
 do 
 	local tempTable = A.GetAuraList("BreakAble")
 	local tempTableInSkipID = A.GetAuraList("Rooted")
+	local spellName
 	for j = 1, #tempTable do 
 		local isRoots 
 		for l = 1, #tempTableInSkipID do 
@@ -174,8 +175,15 @@ do
 		end 
 		
 		if not isRoots then 
-			IsBreakAbleDeBuff[tempTable[j]] = true 
-			IsBreakAbleDeBuff[GetSpellInfo(tempTable[j])] = true 
+			spellName = GetSpellInfo(tempTable[j])
+			if type(spellName) == "table" then
+				spellName = spellName.name
+			end
+			
+			if spellName then 
+				IsBreakAbleDeBuff[tempTable[j]] = true 
+				IsBreakAbleDeBuff[spellName] = true 
+			end
 		end 
 	end 
 end 
