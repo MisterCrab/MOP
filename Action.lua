@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "09.01.2026"
+local DateTime 														= "10.01.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -68,13 +68,21 @@ local 	 EnumerateFrames, 	 GetCursorInfo							=
 	  _G.EnumerateFrames, _G.GetCursorInfo
 	    
 -- AuraDuration 
-local 	 SetPortraitToTexture, 	  CooldownFrame_Set, 	CooldownFrame_Clear, 	ShowBossFrameWhenUninteractable, 	TargetFrame_ShouldShowDebuffs, 	  TargetFrame_Update, 	 TargetFrame_UpdateAuras, 	 TargetFrame_UpdateAuraPositions, 	 TargetFrame_UpdateBuffAnchor, 	  TargetFrame_UpdateDebuffAnchor, 	 Target_Spellbar_AdjustPosition,    DebuffTypeColor, 	MAX_TARGET_BUFFS, 	 MAX_TARGET_DEBUFFS =
-	  _G.SetPortraitToTexture, _G.CooldownFrame_Set, _G.CooldownFrame_Clear, _G.ShowBossFrameWhenUninteractable, _G.TargetFrame_ShouldShowDebuffs, _G.TargetFrame_Update, _G.TargetFrame_UpdateAuras, _G.TargetFrame_UpdateAuraPositions, _G.TargetFrame_UpdateBuffAnchor, _G.TargetFrame_UpdateDebuffAnchor, _G.Target_Spellbar_AdjustPosition, _G.DebuffTypeColor, _G.MAX_TARGET_BUFFS, _G.MAX_TARGET_DEBUFFS
-	  
+local 	 SetPortraitToTexture, 	  CooldownFrame_Set, 	CooldownFrame_Clear, 	ShowBossFrameWhenUninteractable =
+	  _G.SetPortraitToTexture, _G.CooldownFrame_Set, _G.CooldownFrame_Clear, _G.ShowBossFrameWhenUninteractable
+
+-- Backwards compatibility for TargetFrame API. Since TBC Anniversary these functions moved under frame.	 
+local TargetFrame_ShouldShowDebuffs 								= _G.TargetFrame_ShouldShowDebuffs 		or function(f, ...) return f:ShouldShowDebuffs(...) end
+local TargetFrame_Update 											= _G.TargetFrame_Update 				or function(f, ...) return f:Update(...) end
+local TargetFrame_UpdateAuras 										= _G.TargetFrame_UpdateAuras 			or function(f, ...) return f:UpdateAuras(...) end
+local TargetFrame_UpdateAuraPositions 								= _G.TargetFrame_UpdateAuraPositions 	or function(f, ...) return f:UpdateAuraPositions(...) end
+local TargetFrame_UpdateBuffAnchor									= _G.TargetFrame_UpdateBuffAnchor 		or function(f, ...) return f:UpdateBuffAnchor(...) end
+local TargetFrame_UpdateDebuffAnchor 								= _G.TargetFrame_UpdateDebuffAnchor 	or function(f, ...) return f:UpdateDebuffAnchor(...) end
+local Target_Spellbar_AdjustPosition 								= _G.Target_Spellbar_AdjustPosition 	or function(sb) if sb and sb.AdjustPosition then sb:AdjustPosition() end end
+
+local DebuffTypeColor, MAX_TARGET_BUFFS, MAX_TARGET_DEBUFFS 		= _G.DebuffTypeColor, _G.MAX_TARGET_BUFFS, _G.MAX_TARGET_DEBUFFS
+	 
 -- UnitHealthTool
-local 	 TextStatusBar_UpdateTextStringWithValues 					=
-	  _G.TextStatusBar_UpdateTextStringWithValues	 	 
-		
 local GameLocale 													= _G.GetLocale()	
 local DEFAULT_CHAT_FRAME											= _G.DEFAULT_CHAT_FRAME
 local LOOT_SPECIALIZATION_DEFAULT									= _G.LOOT_SPECIALIZATION_DEFAULT
@@ -11387,11 +11395,19 @@ local AuraDuration = {
 			self.defaults.portraitIcon = false 
 		end 
 
-		hooksecurefunc("TargetFrame_UpdateAuras", function() 
-			if Action.IsInitialized and self.IsEnabled then 
-				self:TargetFrameHook()
-			end 
-		end)
+		if _G.TargetFrame_UpdateAuras then
+			hooksecurefunc("TargetFrame_UpdateAuras", function() 
+				if Action.IsInitialized and self.IsEnabled then 
+					self:TargetFrameHook()
+				end 
+			end)
+		else
+			hooksecurefunc(_G.TargetFrame, "UpdateAuras", function() 
+				if Action.IsInitialized and self.IsEnabled then 
+					self:TargetFrameHook()
+				end 
+			end)		
+		end
 
 		hooksecurefunc("CompactUnitFrame_UtilSetBuff", function(buffFrame, unit, index, filter)
 			if Action.IsInitialized and self.IsEnabled then 
@@ -11954,7 +11970,7 @@ function Action:SetQueue(args)
     A_Listener:Add("ACTION_EVENT_QUEUE", "UNIT_SPELLCAST_SUCCEEDED", 		Queue.UNIT_SPELLCAST_SUCCEEDED									)
 	A_Listener:Add("ACTION_EVENT_QUEUE", "BAG_UPDATE_COOLDOWN", 			Queue.BAG_UPDATE_COOLDOWN										)
 	A_Listener:Add("ACTION_EVENT_QUEUE", "ITEM_UNLOCKED",					Queue.ITEM_UNLOCKED												)
-	A_Listener:Add("ACTION_EVENT_QUEUE", LEARNED_SPELL_EVENT, 				Queue.OnEventToReset											)
+	A_Listener:Add("ACTION_EVENT_QUEUE", LEARNED_SPELL_EVENT,	 			Queue.OnEventToReset											)
 	A_Listener:Add("ACTION_EVENT_QUEUE", "SKILL_LINES_CHANGED", 			Queue.OnEventToReset											)
 	A_Listener:Add("ACTION_EVENT_QUEUE", "CHARACTER_POINTS_CHANGED", 		Queue.OnEventToResetNoCombat									)	
     A_Listener:Add("ACTION_EVENT_QUEUE", "CONFIRM_TALENT_WIPE", 			Queue.OnEventToResetNoCombat									)
