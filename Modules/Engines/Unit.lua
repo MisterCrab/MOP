@@ -5356,7 +5356,7 @@ A.Unit = PseudoClass({
 				return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0))
 			else
 				-- Undead and Mechanical mobs are imunne to fear
-				local creatureType = Unit(unitID):CreatureType()
+				local creatureType = self(unitID):CreatureType()
 				return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (not AuraList.FearImunDeBuffs or self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0) and creatureType ~= "Undead" and creatureType ~= "Mechanical"
 			end
 		else 
