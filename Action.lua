@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "11.01.2026"
+local DateTime 														= "12.01.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -72,7 +72,7 @@ local 	 SetPortraitToTexture, 	  CooldownFrame_Set, 	CooldownFrame_Clear, 	ShowB
 	  _G.SetPortraitToTexture, _G.CooldownFrame_Set, _G.CooldownFrame_Clear, _G.ShowBossFrameWhenUninteractable
 
 -- Backwards compatibility for TargetFrame API. Since TBC Anniversary these functions moved under frame.	 
-local TargetFrame_ShouldShowDebuffs 								= _G.TargetFrame_ShouldShowDebuffs 		or function(f, ...) return f:ShouldShowDebuffs(...) end
+local TargetFrame_ShouldShowDebuffs 								= _G.TargetFrame_ShouldShowDebuffs 		or function(...) return _G.TargetFrame:ShouldShowDebuffs(...) end
 local TargetFrame_Update 											= _G.TargetFrame_Update 				or function(f, ...) return f:Update(...) end
 local TargetFrame_UpdateAuras 										= _G.TargetFrame_UpdateAuras 			or function(f, ...) return f:UpdateAuras(...) end
 local TargetFrame_UpdateAuraPositions 								= _G.TargetFrame_UpdateAuraPositions 	or function(f, ...) return f:UpdateAuraPositions(...) end
