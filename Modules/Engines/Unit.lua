@@ -5352,9 +5352,15 @@ A.Unit = PseudoClass({
 		-- Nill-able: DR_Tick, if its nil function returns true whenever non-imun drCat is apply able
 		local unitID 						= self.UnitID 
 		if not A.IsInPvP then 
-			return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (drCat ~= "fear" or (AuraList.FearImunDeBuffs and self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0))
+			if drCat ~= "fear" then
+				return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0))
+			else
+				-- Undead and Mechanical mobs are imunne to fear
+				local creatureType = Unit(unitID):CreatureType()
+				return not self(unitID):IsBoss() and InfoControlAbleClassification[self(unitID):Classification()] and (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (not AuraList.FearImunDeBuffs or self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0) and creatureType ~= "Undead" and creatureType ~= "Mechanical"
+			end
 		else 
-			return (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (drCat ~= "fear" or (AuraList.FearImunDeBuffs and self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0))
+			return (not drCat or self(unitID):GetDR(drCat) > (DR_Tick or 0)) and (drCat ~= "fear" or not AuraList.FearImunDeBuffs or self(unitID):HasDeBuffs(AuraList.FearImunDeBuffs) == 0)
 		end 
 	end, "UnitID"),
 	-- CreatureType: Bool extenstion
