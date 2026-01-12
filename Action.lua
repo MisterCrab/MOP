@@ -27,7 +27,69 @@ local Env 															= TMW.CNDT.Env
 local GetGCD														= TMW.GetGCD
 local strlowerCache  												= TMW.strlowerCache
 local safecall														= TMW.safecall
-TMW.GCD 															= TMW.GCD or GetGCD() -- Fixes nil able compare error because UpdateGlobals launches with delay
+-- Fixes GCDSpell = 61304 if it doesn't exist on classic versions
+if not pcall(TMW.GetGCD) then
+	-- Rogue's Backstab. We don't need class spells anymore - any GCD spell works fine.
+	local GCDSpell = 53
+	TMW.GCDSpell = GCDSpell
+	local GetSpellCooldown = TMW.COMMON.Cooldowns.GetSpellCooldown
+	function TMW.GetGCD()
+		return GetSpellCooldown(GCDSpell).duration
+	end
+	
+	GetGCD = TMW.GetGCD
+	
+	local issecretvalue = TMW.issecretvalue
+	function TMW.OnGCD(d)
+		if issecretvalue(d) then 
+			return false
+		elseif d <= 0.1 then
+			-- A cd of 0.001 is Blizzard's terrible way of indicating that something's cooldown hasn't started,
+			-- but is still unusable, and has a cooldown pending. It should not be considered a GCD.
+			-- In general, anything less than 0.1 isn't a GCD.
+			return false
+		elseif d <= 1 then
+			-- A cd of 1 (or less) is always a GCD (or at least isn't worth showing)
+			return true
+		else
+			-- If the duration passed in is the same as the GCD spell then it is a GCD
+			local gcd = GetGCD()
+			if issecretvalue(gcd) then return false end
+			return gcd == d
+		end
+	end
+	
+	local OnGCD = TMW.OnGCD
+	function Env.CooldownDuration(spell, gcdAsUnusable)
+		if spell == "gcd" then
+			local cooldown = GetSpellCooldown(TMW.GCDSpell)
+			local duration = cooldown.duration
+			if issecretvalue(duration) then return 0 end
+			return duration == 0 and 0 or ((duration - (TMW.time - cooldown.startTime)) / cooldown.modRate)
+		end
+
+		local cooldown = GetSpellCooldown(spell)
+		if cooldown then
+			local duration = cooldown.duration
+			if issecretvalue(duration) then return 0 end
+			return 
+				((duration == 0 or (not gcdAsUnusable and OnGCD(duration))) and 0) or 
+				((duration - (TMW.time - cooldown.startTime)) / cooldown.modRate)
+		end
+		return 0
+	end
+	
+	local GetItemCooldown = _G.GetItemCooldown or (_G.C_Item and _G.C_Item.GetItemCooldown) or (_G.C_Container and _G.C_Container.GetItemCooldown)
+	function Env.ItemCooldownDuration(itemID)
+		local start, duration = GetItemCooldown(itemID)
+		if duration then
+			return ((duration == 0 or OnGCD(duration)) and 0) or (duration - (TMW.time - start))
+		end
+		return 0
+	end	
+end
+-- Fixes nil able compare error because UpdateGlobals launches with delay
+TMW.GCD 															= TMW.GCD or GetGCD() 
 
 local LibStub														= _G.LibStub
 local StdUi 														= LibStub("StdUi"):NewInstance()
