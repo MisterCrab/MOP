@@ -53,7 +53,7 @@ end
 
 -- Class portraits
 _G.ACTION_CONST_PORTRAIT_WARRIOR									= not isRetail and dir .. [[ClassIcon_Warrior]] or 626008
-_G.ACTION_CONST_PORTRAIT_PALADIN									= 236260 -- Custom because in TWW it making conflict with Divine Hammer
+_G.ACTION_CONST_PORTRAIT_PALADIN									= not isRetail and dir .. [[ClassIcon_Paladin]] or 236260 -- Custom because in TWW it making conflict with Divine Hammer
 _G.ACTION_CONST_PORTRAIT_HUNTER										= not isRetail and dir .. [[ClassIcon_Hunter]] or 626000
 _G.ACTION_CONST_PORTRAIT_ROGUE										= not isRetail and dir .. [[ClassIcon_Rogue]] or 626005
 _G.ACTION_CONST_PORTRAIT_PRIEST										= not isRetail and dir .. [[ClassIcon_Priest]] or 626004

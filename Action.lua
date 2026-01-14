@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "12.01.2026"
+local DateTime 														= "14.01.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -11090,7 +11090,7 @@ local AuraDuration = {
 				frameName 	= "TargetFrameBuff" .. i
 				frame 		= _G[frameName]	
 				if frame then 
-					frameCooldown = _G[frameName .. "Cooldown"]
+					frameCooldown = _G[frameName .. "Cooldown"] or _G[frameName].cooldown
 					if frameCooldown then 
 						CooldownFrame_Set(frameCooldown, 0)
 						frame:SetSize(self.CONST.DEFAULT_AURA_SIZE, self.CONST.DEFAULT_AURA_SIZE)
@@ -11102,7 +11102,7 @@ local AuraDuration = {
 				frameName 	= "TargetFrameDebuff" .. i
 				frame 		= _G[frameName]	
 				if frame then 
-					frameCooldown = _G[frameName .. "Cooldown"]
+					frameCooldown = _G[frameName .. "Cooldown"] or _G[frameName].cooldown
 					if frameCooldown then 
 						CooldownFrame_Set(frameCooldown, 0)
 						frame:SetSize(self.CONST.DEFAULT_AURA_SIZE, self.CONST.DEFAULT_AURA_SIZE)
@@ -11471,45 +11471,81 @@ local AuraDuration = {
 			end)		
 		end
 
-		hooksecurefunc("CompactUnitFrame_UtilSetBuff", function(buffFrame, unit, index, filter)
-			if Action.IsInitialized and self.IsEnabled then 
-				local name, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(unit, index, "HELPFUL")
-
-				if type(name) == "table" then 	
-					duration = name.duration
-					expirationTime = name.expirationTime
-					spellId = name.spellId
-					name = name.name
-				end  			
+		-- TBC Anniversary now have full support: friendly/enemy buffs/debuffs
+		-- Classic still missing enemy buffs
+		if Action.BuildToC < 20000 then
+			hooksecurefunc("CompactUnitFrame_UtilSetBuff", function(buffFrame, unit, index, filter)
+				if Action.IsInitialized and self.IsEnabled then 
+					if type(unit) == "table" then
+						-- New API from midnight affecting since TBC Anniversary
+						-- This is backward compatibility (not tested by index)
+						local p = buffFrame:GetParent()
+						unit = p.displayedUnit or p.unit or unit.displayedUnit or unit.unit
+						
+						if not index and p.buffFrames then
+							for i = 1, #p.buffFrames do
+								if p.buffFrames[i] == buffFrame then
+									index = i
+									break
+								end
+							end
+						end
+					end
 					
-				local enabled = expirationTime and expirationTime ~= 0
-				if enabled then
-					CooldownFrame_Set(buffFrame.cooldown, expirationTime - duration, duration, true)
-				else
-					CooldownFrame_Clear(buffFrame.cooldown)
-				end
-			end 
-		end)
+					local name, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(unit, index, buffFrame.filter or "HELPFUL")
 
-		hooksecurefunc("CompactUnitFrame_UtilSetDebuff", function(debuffFrame, unit, index, filter)
-			if Action.IsInitialized and self.IsEnabled then 
-				local name, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(unit, index, filter)
+					if type(name) == "table" then 	
+						duration = name.duration
+						expirationTime = name.expirationTime
+						spellId = name.spellId
+						name = name.name
+					end  			
+						
+					local enabled = expirationTime and expirationTime ~= 0
+					if enabled then
+						CooldownFrame_Set(buffFrame.cooldown, expirationTime - duration, duration, true)
+					else
+						CooldownFrame_Clear(buffFrame.cooldown)
+					end								
+				end 
+			end)
 
-				if type(name) == "table" then 	
-					duration = name.duration
-					expirationTime = name.expirationTime
-					spellId = name.spellId
-					name = name.name
-				end  					
+			hooksecurefunc("CompactUnitFrame_UtilSetDebuff", function(debuffFrame, unit, index, filter)
+				if Action.IsInitialized and self.IsEnabled then 
+					if type(unit) == "table" then
+						-- New API from midnight affecting since TBC Anniversary
+						-- This is backward compatibility (not tested by index)
+						local p = debuffFrame:GetParent()
+						unit = p.displayedUnit or p.unit or unit.displayedUnit or unit.unit
+						
+						if not index and p.debuffFrames then
+							for i = 1, #p.debuffFrames do
+								if p.debuffFrames[i] == debuffFrame then
+									index = i
+									break
+								end
+							end
+						end
+					end				
 				
-				local enabled = expirationTime and expirationTime ~= 0
-				if enabled then
-					CooldownFrame_Set(debuffFrame.cooldown, expirationTime - duration, duration, true)
-				else
-					CooldownFrame_Clear(debuffFrame.cooldown)
-				end
-			end 
-		end)
+					local name, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(unit, index, filter)
+
+					if type(name) == "table" then 	
+						duration = name.duration
+						expirationTime = name.expirationTime
+						spellId = name.spellId
+						name = name.name
+					end  					
+					
+					local enabled = expirationTime and expirationTime ~= 0
+					if enabled then
+						CooldownFrame_Set(debuffFrame.cooldown, expirationTime - duration, duration, true)
+					else
+						CooldownFrame_Clear(debuffFrame.cooldown)
+					end
+				end 
+			end)
+		end
 						
 		-- turn on visual immediately
 		self:TurnOnAuras()	
