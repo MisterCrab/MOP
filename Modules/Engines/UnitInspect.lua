@@ -125,7 +125,10 @@ Listener:Add("ACTION_EVENT_UNIT_INSPECT", "PLAYER_REGEN_ENABLED", 		   UnitInspe
 Listener:Add("ACTION_EVENT_UNIT_INSPECT", "UNIT_INVENTORY_CHANGED",		   UnitInspectWipe)
 Listener:Add("ACTION_EVENT_UNIT_INSPECT", "PLAYER_ENTERING_WORLD",	function()
 	-- Fix for ruRU, this global is removed, causes error in Localizations.lua from Blizzard_InspectUI
-	_G.SpecializationSpecName = _G.SpecializationSpecName or { SetFontObject = function() end }
+	if GameLocale == "ruRU" then
+		_G.SpecializationSpecName = _G.SpecializationSpecName or { SetFontObject = function() end }
+		_G.InspectTalentFrameSpecName = _G.InspectTalentFrameSpecName or { SetFontObject = function() end }
+	end	
 	_G.InspectFrame_LoadUI()
 	Listener:Remove("ACTION_EVENT_UNIT_INSPECT", "PLAYER_ENTERING_WORLD")	
 end)
