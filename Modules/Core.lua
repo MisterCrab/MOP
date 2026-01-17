@@ -235,7 +235,7 @@ local function IsShoot(unit)
 			GetToggle(1, "AutoShoot") and not Player:IsShooting() and  
 			(
 				(playerClass == "HUNTER" and A.AutoShot:IsReadyP(unit)) or 	-- :IsReady also checks ammo amount by :IsUsable method
-				(playerClass ~= "HUNTER" and HasWandEquipped() and A.Shoot:IsInRange(unit) and GetCurrentGCD() <= GetPing() and (not GetToggle(1, "AutoAttack") or not Player:IsAttacking() or Unit(unit):GetRange() > 6))
+				(playerClass ~= "HUNTER" and HasWandEquipped() and A.Shoot:IsInRange(unit) and GetCurrentGCD() <= GetPing() and (not GetToggle(1, "AutoAttack") or not Player:IsAttacking() or Unit(unit):GetRange() > 6) and Unit("player"):CombatTime() ~= 0)
 			)
 end 
 
