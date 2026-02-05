@@ -548,8 +548,8 @@ function A.Rotation(icon)
 				--return A:Show(icon, CONST_AUTOSHOOT)
 			--end 
 			
-				-- Use AutoAttack only if not a hunter or it's is out of range by AutoShot 
-			if 	(playerClass ~= "HUNTER" or not GetToggle(1, "AutoShoot") or not Player:IsShooting() or not A.AutoShot:IsInRange(unit)) and 
+				-- Use AutoAttack only if not a hunter or it's is out of range by AutoShot or if your pet is not attacking your target while combat
+			if 	(playerClass ~= "HUNTER" or not GetToggle(1, "AutoShoot") or not Player:IsShooting() or not A.AutoShot:IsInRange(unit) or (not Pet:IsAttacking() and Unit(player):CombatTime() > 0)) and 
 				-- ByPass Rogue's mechanic
 				(playerClass ~= "ROGUE" or ((unit ~= mouseover or UnitIsUnit(unit, target)) and Unit(unit):HasDeBuffs("BreakAble") == 0)) and 
 				-- ByPass Warlock's mechanic 
