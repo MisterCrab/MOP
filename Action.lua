@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "05.02.2026"
+local DateTime 														= "07.02.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -9798,8 +9798,8 @@ local MacroAPI; MacroAPI = {
 	rank_localizations = {
 		enUS = "Rank",
 		ruRU = "Уровень",
-		-- Unconfirmed:
-		deDE = "Stufe",
+		deDE = "Rang",
+		-- Unconfirmed:		
 		frFR = "Niveau",
 		esES = "Rango",
 		itIT = "Grado",
