@@ -229,6 +229,9 @@ A.HealingPotion						= Create({ Type = "Potion", 			ID = 929, FixedTexture = CON
 A.GreaterHealingPotion				= Create({ Type = "Potion", 			ID = 1710, FixedTexture = CONST.HEALINGPOTION																												})
 A.SuperiorHealingPotion				= Create({ Type = "Potion", 			ID = 3928, FixedTexture = CONST.HEALINGPOTION																												})
 A.MajorHealingPotion				= Create({ Type = "Potion", 			ID = 13446, FixedTexture = CONST.HEALINGPOTION																												})
+if BuildToC >= 20000 then
+	A.SuperHealingPotion			= Create({ Type = "Potion", 			ID = 22829, FixedTexture = CONST.HEALINGPOTION																												})
+end
 
 local function IsShoot(unit)
 	return 	playerClass ~= "WARRIOR" and playerClass ~= "ROGUE" and 		-- their shot must be in profile 
@@ -317,7 +320,7 @@ function A.CanUseHealingPotion(icon)
 	-- @return boolean or nil
 	local Healthstone = GetToggle(1, "HealthStone")  
 	if Healthstone >= 0 and (BuildToC < 110000 or A.ZoneID ~= 1684 or Unit(player):HasDeBuffs(320102) == 0) then -- Retail: Theater of Pain zone excluding "Blood and Glory" debuff 
-		local healthPotion = DetermineUsableObject(player, true, nil, nil, nil, A.MajorHealingPotion, A.SuperiorHealingPotion, A.GreaterHealingPotion, A.HealingPotion, A.LesserHealingPotion, A.MinorHealingPotion)
+		local healthPotion = DetermineUsableObject(player, true, nil, nil, nil, A.SuperHealingPotion, A.MajorHealingPotion, A.SuperiorHealingPotion, A.GreaterHealingPotion, A.HealingPotion, A.LesserHealingPotion, A.MinorHealingPotion)
 		if healthPotion then 
 			if Healthstone >= 100 then -- AUTO 
 				if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
