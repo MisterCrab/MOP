@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "08.02.2026"
+local DateTime 														= "14.02.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -9799,17 +9799,18 @@ local MacroAPI; MacroAPI = {
 		enUS = "Rank",
 		ruRU = "Уровень",
 		deDE = "Rang",
-		-- Unconfirmed:		
-		frFR = "Niveau",
+		frFR = "Rang",			
 		esES = "Rango",
-		itIT = "Grado",
-		ptBR = "Classe",
-		koKR = "등급",
+		itIT = "Rank",
+		ptBR = "Grau",
+		koKR = "레벨",
 		zhCN = "等级",
 		zhTW = "等級",
 	},
 	rankgsub = function(lvl)
-		return strformat("(%s %s)", MacroAPI.rank_localizations[GameLocale] or MacroAPI.rank_localizations.enUS, lvl)
+		-- koKR: %((%d+) Rank%)
+		-- other: %(Rank (%d+)%)
+		return strformat("(%s %s)", GameLocale == "koKR" and lvl or MacroAPI.rank_localizations[GameLocale] or MacroAPI.rank_localizations.enUS, GameLocale ~= "koKR" and lvl or MacroAPI.rank_localizations[GameLocale] or MacroAPI.rank_localizations.enUS)
 	end,
 	Format = setmetatable({ 
 			[""] = "",
