@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "14.02.2026"
+local DateTime 														= "23.02.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -11181,10 +11181,15 @@ local AuraDuration = {
 					end 
 				end 
 			end
-			SetPortraitToTexture(auraCD.texture, icon)
-			originalPortrait:Hide()
-			auraCD:SetCooldown(expirationTime - duration, duration)
-			auraCD:Show()
+			if duration and expirationTime and icon then
+				SetPortraitToTexture(auraCD.texture, icon)
+				originalPortrait:Hide()
+				auraCD:SetCooldown(expirationTime - duration, duration)
+				auraCD:Show()
+			else
+				auraCD:Hide()
+				originalPortrait:Show()
+			end
 		else
 			auraCD:Hide()
 			originalPortrait:Show()
