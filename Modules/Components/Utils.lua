@@ -1,4 +1,4 @@
--------------------------------------------------------------------------------
+594-------------------------------------------------------------------------------
 -- TellMeWhen Utils
 -------------------------------------------------------------------------------
 local _G, assert, error, tostring, select, type, next, math, pairs, ipairs, setmetatable, table, pcall =
@@ -584,13 +584,14 @@ if BuildToC >= 50500 then
 					end
 				end 
 			end
-		elseif z == "pvp" and GetBattlefieldScore then
+		elseif z == "pvp" and BuildToC >= 60000 then
+			-- NOTE: WOD is a guess here. Unclear on exactly when specs were added as returns of GetBattlefieldScore.
 			RequestBattlefieldScoreData()
 			
 			local _, name, classToken, talentSpec, specID
 			for i = 1, TeamCacheEnemy.MaxSize do 
 				name, _, _, _, _, _, _, _, classToken, _, _, _, _, _, _, talentSpec = GetBattlefieldScore(i)
-				if name then
+				if name and talentSpec then					
 					specID = specNameToRole[classToken][talentSpec]
 					UnitSpecsMap[name] = specID
 				end
