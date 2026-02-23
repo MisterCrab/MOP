@@ -31,14 +31,13 @@ local EngagedBosses					= A.BossMods.EngagedBosses
 -- Locals DBM
 -------------------------------------------------------------------------------
 local DBM_GetTimeRemaining, DBM_GetTimeRemainingBySpellID
-if DBM then
+if DBM and DBM.RegisterCallback then
 	local Timers, TimersBySpellID 	= {}, {}
 
 	A.BossMods.HasDBM 				= true
-	DBM_TIMER_PULL					= strlowerCache[_G.DBM_CORE_TIMER_PULL or _G.DBM_CORE_L.TIMER_PULL] -- Old DBM versions have DBM_CORE_TIMER_PULL
+	DBM_TIMER_PULL					= strlowerCache[_G.DBM_CORE_TIMER_PULL or (_G.DBM_CORE_L and _G.DBM_CORE_L.TIMER_PULL) or "Pull in"]
 
-	DBM:RegisterCallback("DBM_TimerStart", function(_, id, text, timerRaw, icon, timerType, spellid, colorId)
-		-- Older versions of DBM return this value as a string:
+	local function OnDBMTimerStart(_, id, text, timerRaw, icon, timerType, spellid, colorId)
 		local duration
 		if type(timerRaw) == "string" then
 			duration = toNum[timerRaw:match("%d+")]
@@ -62,12 +61,20 @@ if DBM then
 			Timers[id].spellid		 = spellid
 			TimersBySpellID[spellid] = Timers[id]
 		end
-	end)
+	end
+	DBM:RegisterCallback("DBM_TimerStart", OnDBMTimerStart)
+	DBM:RegisterCallback("DBM_TimerBegin", OnDBMTimerStart)
 	DBM:RegisterCallback("DBM_TimerStop", function(_, id)
 		if Timers[id] and Timers[id].spellid then
 			TimersBySpellID[Timers[id].spellid] = nil
 		end
 		Timers[id] = nil
+	end)
+	DBM:RegisterCallback("DBM_TimerUpdate", function(_, id, elapsed, totalTime)
+		if Timers[id] then
+			Timers[id].start = TMW.time - elapsed
+			Timers[id].duration = totalTime
+		end
 	end)
 
 	DBM_GetTimeRemaining = function(text)
@@ -127,7 +134,7 @@ end
 -------------------------------------------------------------------------------
 -- Locals BigWigs
 -------------------------------------------------------------------------------
-local BigWigs_GetTimeRemaining
+local BigWigs_GetTimeRemaining, BigWigs_GetTimeRemainingByKey
 local BigWigs_GetNameplateTimeRemaining
 if BigWigsLoader then
 	A.BossMods.HasBigWigs = true
@@ -244,6 +251,20 @@ if BigWigsLoader then
 
 		return remaining, expirationTime
 	end
+	BigWigs_GetTimeRemainingByKey = function(key)
+		local remaining, expirationTime, t = -1, -1
+		if key then
+			for k = 1, #Timers do
+				t = Timers[k]
+				if t.key == key then
+					expirationTime 	= t.start + t.duration
+					remaining 		= max(0, expirationTime - TMW.time)
+					return remaining, expirationTime
+				end
+			end
+		end
+		return remaining, expirationTime
+	end
 	BigWigs_GetNameplateTimeRemaining = function(key)
 		assert(key, "Bad argument 'key' (nil value) for function BigWigs_GetTimeRemaining")		
 		local remaining, expirationTime, t = -1, -1		
@@ -323,7 +344,11 @@ function A.BossMods:GetTimer(name)
 		end
 
 		if self.HasBigWigs then
-			remaining2, expirationTime2 = BigWigs_GetTimeRemaining(strlowerCache[name])
+			if type(name) == "string" then
+				remaining2, expirationTime2 = BigWigs_GetTimeRemaining(strlowerCache[name])
+			else
+				remaining2, expirationTime2 = BigWigs_GetTimeRemainingByKey(name)
+			end
 		end
 
 		if remaining1 > remaining2 then
