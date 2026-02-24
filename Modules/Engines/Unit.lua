@@ -7164,7 +7164,7 @@ A.EnemyTeam = PseudoClass({
 		-- Nill-able: offset
 		local arena 
 		
-		if not A_Unit("player"):IsFocused("MELEE") then 
+		if not A_Unit("player"):IsFocused(nil, nil, nil, true) then 
 			for i = 1, TeamCacheEnemy.MaxSize do 
 				arena = TeamCacheEnemyIndexToPLAYERs[i]
 				if arena then 
