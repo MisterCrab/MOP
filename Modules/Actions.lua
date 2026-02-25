@@ -615,7 +615,7 @@ end
 local DataSpellRanks, DataSpellRanksMirror = {}, {}
 local DataIsSpellUnknown, DataIsSpellUnknownMirror = {}, {}
 local timeSinceLastUpdate = TMW.time or 0
-function A.UpdateSpellBook(IsLoadingProfileOrPetUPDOWN)
+function A.UpdateSpellBook(skipReconfigME)
 	local ShowAllSpellRanks = GetCVar("ShowAllSpellRanks") or "1"
 	SetCVar("ShowAllSpellRanks", "1")
 	
@@ -734,7 +734,7 @@ function A.UpdateSpellBook(IsLoadingProfileOrPetUPDOWN)
 		TMW:Fire("TMW_ACTION_SPELL_BOOK_CHANGED")	  		-- for [3] tab refresh 
 	  --TMW:Fire("TMW_ACTION_RANK_DISPLAY_CHANGED") 		-- no need here since :Show method will be triggered 
 	
-		if IsLoadingProfileOrPetUPDOWN ~= true and TMW.time > timeSinceLastUpdate + 1 then
+		if skipReconfigME ~= true and TMW.time > timeSinceLastUpdate + 1 then
 			TMW:Fire("TMW_ACTION_METAENGINE_RECONFIGURE")	-- only fired on new or updated spells
 			timeSinceLastUpdate = TMW.time
 		end
@@ -751,10 +751,10 @@ if IsEventValid("LEARNED_SPELL_IN_TAB") then
 else
 	Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_SKILL_LINE", A.UpdateSpellBook)
 end
-Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 				A.UpdateSpellBook) 
-TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", 					A.UpdateSpellBook)
-TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP", function()	A.UpdateSpellBook(true) end)
-TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN", function()	A.UpdateSpellBook(true) end)
+Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 										A.UpdateSpellBook					   ) 
+TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", 			function(_, skipReconfigME) 	A.UpdateSpellBook(skipReconfigME) 	end)
+TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP",		function()						A.UpdateSpellBook(true) 			end)
+TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN", 	function()						A.UpdateSpellBook(true) 			end)
 
 function A:IsBlockedBySpellBook()
 	-- @return boolean 

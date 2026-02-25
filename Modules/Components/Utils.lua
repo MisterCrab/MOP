@@ -507,6 +507,9 @@ elseif BuildToC < 100000 then
 		if not AreTablesEqual(TalentMap, TalentMapMirror) then
 			MirrorTables(TalentMap, TalentMapMirror)
 			TMW:Fire("TMW_ACTION_TALENT_MAP_UPDATED")
+		else
+			-- This is fix for out of arena issue when action list gets unknown for :IsBlockedBySpellBook() method
+			TMW:Fire("TMW_ACTION_TALENT_MAP_UPDATED", true)
 		end
 		Listener:Remove("ACTION_EVENT_UTILS_TALENT_MAP", "PLAYER_ENTERING_WORLD")
 	end
