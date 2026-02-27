@@ -951,7 +951,7 @@ if LibClassicCasterino then
 	end
 	
 	function Type:HandleYieldedInfo(icon, iconToSet, spell, unit, GUID, texture, start, duration, reverse)
-		if spell then
+		if spell and duration ~= huge then
 			-- There was a spellcast or channel present on one of the icon's units.
 			iconToSet:SetInfo(
 				"state; texture; start, duration; reverse; spell; unit, GUID",
@@ -1070,7 +1070,8 @@ local function LossOfControlOnUpdate(icon, time)
 		duration = select(2, A_LossOfControl:GetFrameData())
 	end 
 
-	if duration ~= 0 and time - start < duration then 
+	if duration ~= 0 and duration ~= huge and time - start < duration then 
+		-- Persistent auras no longer supported
 		icon:SetInfo(
 			"state; start, duration",
 			CONTROLLOST,
@@ -1104,7 +1105,7 @@ end
 
 local function LossOfControlOnEvent(icon)	
 	local textureID, duration = A_LossOfControl:GetFrameData()		
-	if duration ~= 0 and textureID ~= 0 then 
+	if duration ~= 0 and duration ~= huge and textureID ~= 0 then 
 		icon:SetInfo(
 			"texture; state; start, duration",
 			textureID,
