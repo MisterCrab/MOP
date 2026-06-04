@@ -1,5 +1,5 @@
 --- 
-local DateTime 														= "28.02.2026"
+local DateTime 														= "04.06.2026"
 ---
 local pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string = 
 	  pcall, ipairs, pairs, type, assert, error, setfenv, getmetatable, setmetatable, loadstring, next, unpack, select, _G, coroutine, table, math, string
@@ -20253,6 +20253,7 @@ end
 -- Specializations
 -------------------------------------------------------------------------------
 -- MoP added specialization API functions back but we will continue using legacy API until v2
+-- TODO: Retail - Just temporary fix for low level characters until v2 release, have to make it better
 local classSpecIds = {
 	DRUID 				= {102,103,105},
 	HUNTER 				= {253,254,255},
@@ -20264,7 +20265,9 @@ local classSpecIds = {
 	WARLOCK 			= {265,266,267},
 	WARRIOR 			= {71,72,73},
 	DEATHKNIGHT 		= {250,251,252},
-	MONK 				= {268,270,269},
+	MONK				= {268,270,269},
+	DEMONHUNTER			= {577,581,1480},
+	EVOKER 				= {1467,1468,1473},
 }; ActionData.classSpecIds = classSpecIds
 if Action.BuildToC >= 50000 then
 	tinsert(classSpecIds.DRUID, 3, 104)
@@ -20297,7 +20300,7 @@ local specs = {
 
 	[102]	= {"Balance", 136096, "DAMAGER"},
 	[103]	= {"Feral", 132115, "DAMAGER"},
-	[104]	= {"Guardian", 132276, "TANK"},
+	[104]	= {"Guardian", 132276, "TANK"}, -- Retail version
 	[105]	= {"Restoration", 136041, "HEALER"},
 
 	[262]	= {"Elemental", 136048, "DAMAGER"},
@@ -20305,7 +20308,7 @@ local specs = {
 	[264]	= {"Restoration", 136052, "HEALER"},
 
 	[259]	= {"Assassination", 236270, "DAMAGER"},
-	[260]	= {"Combat", 236286, "DAMAGER"},
+	[260]	= {"Outlaw", 236286, "DAMAGER"},
 	[261]	= {"Subtlety", 132320, "DAMAGER"},
 	
 	[250]	= {"Blood", 135770, "TANK"},
@@ -20315,6 +20318,14 @@ local specs = {
 	[268]	= {"Brewmaster", 608951, "TANK"},
 	[270]	= {"Mistweaver", 608952, "HEALER"},
 	[269]	= {"Windwalker", 608953, "DAMAGER"},
+	
+	[577]	= {"Havoc", 1247264, "DAMAGER"},
+	[581]	= {"Vengeance", 1247265, "TANK"},
+	[1480]	= {"Devourer", 7455385, "DAMAGER"},
+	
+	[1467]	= {"Devastation", 4511811, "DAMAGER"},
+	[1468]	= {"Preservation", 4511812, "HEALER"},
+	[1473]	= {"Augmentation", 5198700, "DAMAGER"},
 }; ActionData.specs = specs
 
 function Action.GetNumSpecializations()

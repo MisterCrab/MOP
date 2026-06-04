@@ -153,7 +153,7 @@ function HR.CastCycle(Object, Range, Condition)
 		if HR.AoEON() then
 			local BestUnit = nil
 			local TargetGUID = UnitGUID("target")
-			for _, CycleUnit in pairs(ActiveNameplates) do
+			for CycleUnit in pairs(ActiveNameplates) do
 				if (not range or Unit(CycleUnit):GetRange() <= range) and UnitGUID(CycleUnit) ~= TargetGUID and Condition(CycleUnit) then
 					HR.CastLeftNameplate(CycleUnit, Object)
 					return true 
@@ -171,7 +171,7 @@ function HR.CastTargetIf(Object, Range, TargetIfMode, TargetIfCondition, Conditi
 	end	
 	if HR.AoEON() then
 		local BestUnit, BestConditionValue = nil, nil
-		for _, CycleUnit in pairs(ActiveNameplates) do
+		for CycleUnit in pairs(ActiveNameplates) do
 			if (not range or Unit(CycleUnit):GetRange() <= range) and ((Condition and Condition(CycleUnit)) or not Condition) and (not BestConditionValue or Utils.CompareThis(TargetIfMode, TargetIfCondition(CycleUnit), BestConditionValue)) then
 				BestUnit, BestConditionValue = CycleUnit, TargetIfCondition(CycleUnit)
 			end
