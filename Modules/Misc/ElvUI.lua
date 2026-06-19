@@ -6,7 +6,7 @@ local C_AddOns 							= _G.C_AddOns
 local IsAddOnLoaded 					= C_AddOns and C_AddOns.IsAddOnLoaded or _G.IsAddOnLoaded
 
 local function IsLoadedPixelSnap()
-	if IsAddOnLoaded("ElvUI") or IsAddOnLoaded("Cell") then
+	if IsAddOnLoaded("ElvUI") or IsAddOnLoaded("Cell") or IsAddOnLoaded("EllesmereUI") then
 		return true
 	end
 end
