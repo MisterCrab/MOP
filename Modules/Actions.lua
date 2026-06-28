@@ -121,12 +121,8 @@ local Spell					= _G.Spell
 
 local C_SpellBook			= _G.C_SpellBook
 
-local                                         IsUsableSpell,                                          IsHelpfulSpell,                                          IsHarmfulSpell,                                             IsAttackSpell,                                          IsCurrentSpell,             IsSpellKnown =
-	  C_Spell and C_Spell.IsSpellUsable or _G.IsUsableSpell, C_Spell and C_Spell.IsSpellHelpful or _G.IsHelpfulSpell, C_Spell and C_Spell.IsSpellHarmful or _G.IsHarmfulSpell, C_Spell and C_Spell.IsAutoAttackSpell or _G.IsAttackSpell, C_Spell and C_Spell.IsCurrentSpell or _G.IsCurrentSpell, C_SpellBook.IsSpellKnown	
-
-local IsPlayerSpell 				= _G.IsPlayerSpell or function(spellID)
-	return IsSpellKnown(spellID, SpellBookSpellBankPlayer)
-end
+local                                         IsUsableSpell,                                          IsHelpfulSpell,                                          IsHarmfulSpell,                                             IsAttackSpell,                                          IsCurrentSpell,			   IsSpellKnownOrInSpellBook,			  IsSpellInSpellBook =
+	  C_Spell and C_Spell.IsSpellUsable or _G.IsUsableSpell, C_Spell and C_Spell.IsSpellHelpful or _G.IsHelpfulSpell, C_Spell and C_Spell.IsSpellHarmful or _G.IsHarmfulSpell, C_Spell and C_Spell.IsAutoAttackSpell or _G.IsAttackSpell, C_Spell and C_Spell.IsCurrentSpell or _G.IsCurrentSpell, C_SpellBook.IsSpellKnownOrInSpellBook, C_SpellBook.IsSpellInSpellBook or C_SpellBook.IsSpellKnown
 
 local 	  GetSpellTexture, 	  									  GetSpellLink,    									   GetSpellInfo, 											   GetSpellDescription, 											GetSpellCount,	   											GetSpellPowerCost, 	  CooldownDuration,    										   GetSpellCharges,    GetHaste, 	GetShapeshiftFormCooldown, 	  GetSpellBaseCooldown,    										   GetSpellAutocast = 
 	  TMW.GetSpellTexture, C_Spell and C_Spell.GetSpellLink or _G.GetSpellLink, C_Spell and C_Spell.GetSpellInfo or _G.GetSpellInfo, C_Spell and C_Spell.GetSpellDescription or _G.GetSpellDescription, C_Spell and C_Spell.GetSpellCastCount or _G.GetSpellCount, 	C_Spell and C_Spell.GetSpellPowerCost or _G.GetSpellPowerCost, Env.CooldownDuration, C_Spell and C_Spell.GetSpellCharges or _G.GetSpellCharges, _G.GetHaste, _G.GetShapeshiftFormCooldown, _G.GetSpellBaseCooldown, C_Spell and C_Spell.GetSpellAutoCast or _G.GetSpellAutocast
@@ -189,6 +185,10 @@ do
 end 
 
 -- Player 
+local IsPlayerSpell 				= _G.IsPlayerSpell or function(spellID)
+	return FindSpellBookSlotBySpellID(spellID, false) or IsSpellInSpellBook(spellID, SpellBookSpellBankPlayer) or IsSpellKnownOrInSpellBook(spellID, SpellBookSpellBankPlayer)
+end
+
 local GCD_OneSecond 			= {
 	ROGUE 						= true,
 }
@@ -667,8 +667,9 @@ function A.UpdateSpellBook(skipReconfigME)
 	end 	
 
 	-- Overwrite ID of spells with update isRank and block unavailable ranks 
-	if A[A.PlayerClass] then 				
-		for k, v in pairs(A[A.PlayerClass]) do 
+	local holder = A[A.PlayerClass]
+	if holder then 				
+		for k, v in pairs(holder) do 
 			if type(v) == "table" and v.Type == "Spell" then 
 				local spellName = v:Info()
 				-- Overwrite ID and isRank 
@@ -706,15 +707,15 @@ function A.UpdateSpellBook(skipReconfigME)
 				
 				-- Block spell (unlearned)				
 				-- Search by player book
-				local slot = FindSpellBookSlotBySpellID(v.ID, false)  
+				local isKnown = FindSpellBookSlotBySpellID(v.ID, false) or IsSpellInSpellBook(v.ID, SpellBookSpellBankPlayer) or IsSpellKnownOrInSpellBook(v.ID, SpellBookSpellBankPlayer)
 				
 				-- Search by pet book 
-				if not slot then 
-					slot = FindSpellBookSlotBySpellID(v.ID, true)
+				if not isKnown then 
+					isKnown = FindSpellBookSlotBySpellID(v.ID, true) or IsSpellInSpellBook(v.ID, SpellBookSpellBankPet) or IsSpellKnownOrInSpellBook(v.ID, SpellBookSpellBankPet) or Pet:IsSpellKnown(spellID)
 				end
 				
 				-- Add to block 
-				if not slot then 
+				if not isKnown then 
 					DataIsSpellUnknown[v.ID] = true 
 					-- Prevent nil errors with ranks if not found at all 
 					if not v.isRank then 
