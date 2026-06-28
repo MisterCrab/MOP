@@ -711,7 +711,7 @@ function A.UpdateSpellBook(skipReconfigME)
 				
 				-- Search by pet book 
 				if not isKnown then 
-					isKnown = FindSpellBookSlotBySpellID(v.ID, true) or IsSpellInSpellBook(v.ID, SpellBookSpellBankPet) or IsSpellKnownOrInSpellBook(v.ID, SpellBookSpellBankPet) or Pet:IsSpellKnown(spellID)
+					isKnown = FindSpellBookSlotBySpellID(v.ID, true) or IsSpellInSpellBook(v.ID, SpellBookSpellBankPet) or IsSpellKnownOrInSpellBook(v.ID, SpellBookSpellBankPet) or Pet:IsSpellKnown(v.ID)
 				end
 				
 				-- Add to block 
