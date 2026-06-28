@@ -123,6 +123,8 @@ local C_SpellBook			= _G.C_SpellBook
 
 local                                         IsUsableSpell,                                          IsHelpfulSpell,                                          IsHarmfulSpell,                                             IsAttackSpell,                                          IsCurrentSpell,             IsSpellKnown =
 	  C_Spell and C_Spell.IsSpellUsable or _G.IsUsableSpell, C_Spell and C_Spell.IsSpellHelpful or _G.IsHelpfulSpell, C_Spell and C_Spell.IsSpellHarmful or _G.IsHarmfulSpell, C_Spell and C_Spell.IsAutoAttackSpell or _G.IsAttackSpell, C_Spell and C_Spell.IsCurrentSpell or _G.IsCurrentSpell, C_SpellBook.IsSpellKnown	
+local IsSpellKnownOrInSpellBook	= C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook
+local IsSpellInSpellBook			= C_SpellBook and C_SpellBook.IsSpellInSpellBook
 
 local IsPlayerSpell 				= _G.IsPlayerSpell or function(spellID)
 	return IsSpellKnown(spellID, SpellBookSpellBankPlayer)
@@ -145,6 +147,33 @@ local TalentMap 					= A.TalentMap
 -- Rank 
 local GetSpellBookItemName			= _G.GetSpellBookItemName or C_SpellBook.GetSpellBookItemName
 local FindSpellBookSlotBySpellID 	= _G.FindSpellBookSlotBySpellID
+
+local function IsSpellKnownInBook(spellID, isPet)
+	if type(spellID) ~= "number" then
+		return false
+	end
+
+	local spellBank = isPet and SpellBookSpellBankPet or SpellBookSpellBankPlayer
+	if type(IsSpellKnownOrInSpellBook) == "function" and IsSpellKnownOrInSpellBook(spellID, spellBank, true) then
+		return true
+	end
+
+	if type(IsSpellInSpellBook) == "function" and IsSpellInSpellBook(spellID, spellBank, true) then
+		return true
+	end
+
+	if isPet then
+		if Pet:IsActive() and Pet:IsSpellKnown(spellID) then
+			return true
+		end
+	else
+		if IsPlayerSpell(spellID) then
+			return true
+		end
+	end
+
+	return FindSpellBookSlotBySpellID and FindSpellBookSlotBySpellID(spellID, isPet) and true or false
+end
 
 -- Unit 	  
 local UnitAura						= _G.UnitAura or _G.C_UnitAuras.GetAuraDataByIndex
@@ -704,17 +733,16 @@ function A.UpdateSpellBook(skipReconfigME)
 					end 
 				end 
 				
-				-- Block spell (unlearned)				
-				-- Search by player book
-				local slot = FindSpellBookSlotBySpellID(v.ID, false)  
-				
-				-- Search by pet book 
-				if not slot then 
-					slot = FindSpellBookSlotBySpellID(v.ID, true)
+				-- Block spell (unlearned)
+				-- Search by player book first, then by pet book.
+				local isKnown = IsSpellKnownInBook(v.ID, false)
+
+				if not isKnown then
+					isKnown = IsSpellKnownInBook(v.ID, true)
 				end
 				
 				-- Add to block 
-				if not slot then 
+				if not isKnown then
 					DataIsSpellUnknown[v.ID] = true 
 					-- Prevent nil errors with ranks if not found at all 
 					if not v.isRank then 
@@ -752,6 +780,19 @@ else
 	Listener:Add("ACTION_EVENT_SPELL_RANKS", "LEARNED_SPELL_IN_SKILL_LINE", A.UpdateSpellBook)
 end
 Listener:Add("ACTION_EVENT_SPELL_RANKS", "TRAINER_UPDATE", 										A.UpdateSpellBook					   ) 
+if IsEventValid("PLAYER_ENTERING_WORLD") then
+	local function UpdateSpellBookOnEnteringWorld()
+		A.UpdateSpellBook(true)
+
+		if type(A.TimerSetRefreshAble) == "function" then
+			A.TimerSetRefreshAble("UpdateSpellBook:PLAYER_ENTERING_WORLD", 0.5, function()
+				A.UpdateSpellBook(true)
+			end)
+		end
+	end
+
+	Listener:Add("ACTION_EVENT_SPELL_RANKS", "PLAYER_ENTERING_WORLD", UpdateSpellBookOnEnteringWorld)
+end
 TMW:RegisterCallback("TMW_ACTION_TALENT_MAP_UPDATED", 			function(_, skipReconfigME) 	A.UpdateSpellBook(skipReconfigME) 	end)
 TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_UP",		function()						A.UpdateSpellBook(true) 			end)
 TMW:RegisterCallback("TMW_ACTION_PET_LIBRARY_MAIN_PET_DOWN", 	function()						A.UpdateSpellBook(true) 			end)
@@ -2289,4 +2330,4 @@ function A.Create(args)
 	-- nil
 	arg.Hidden = true 		
 	return setmetatable(arg, { __index = A })		 
-end 
+end
