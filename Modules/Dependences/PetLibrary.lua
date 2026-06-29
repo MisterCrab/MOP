@@ -85,7 +85,7 @@ local Listener							= A.Listener
 local Print								= A.Print
 local GetCL								= A.GetCL
 local MacroLibrary						= LibStub("MacroLibrary")
-local Lib 								= LibStub:NewLibrary("PetLibrary", 29)
+local Lib 								= LibStub:NewLibrary("PetLibrary", 30)
 
 local huge 								= math.huge	  
 local max 								= math.max
@@ -1483,7 +1483,8 @@ function Lib:IsSpellKnown(spell)
 	if C_SpellBook and C_SpellBook.GetSpellBookItemInfo then 
 		return self.Data.KnownSpells[GetSpellName(spell)] and true 
 	else 
-		return GetSpellBookItemInfo(GetSpellName(spell)) and true -- DON'T TOUCH THIS AS WHILE ITS STILL AVAILABLE ON CLASSIC+ IT CAN CHECK IN REAL-TIME IF NOT SPECIFIED SECOND ARGUMENT
+		local spellName = GetSpellName(spell)
+		return spellName and GetSpellBookItemInfo(spellName) and true -- DON'T TOUCH THIS AS WHILE ITS STILL AVAILABLE ON CLASSIC+ IT CAN CHECK IN REAL-TIME IF NOT SPECIFIED SECOND ARGUMENT
 	end 
 	-- Only this function is best way to check if spell known so far 
 end 
